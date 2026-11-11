@@ -127,7 +127,7 @@ function renderView(v) {
   out.width = v.width; out.height = v.height;
   const g = out.getContext("2d");
   g.drawImage(renderer.domElement, 0, 0);
-  drawOverlay(g, cam, v);
+  if (!v.clean) drawOverlay(g, cam, v);
   return out;
 }
 
@@ -149,11 +149,21 @@ function drawOverlay(g, cam, v) {
     // rulers along bottom (u axis) and left (v axis). rulers: {u:{axis, from, to, fixed:[...]}, v:{...}}
     g.font = "11px sans-serif";
     const drawAxis = (ax, isBottom) => {
-      const step = (ax.to - ax.from) > 60 ? 10 : 5;
-      for (let t = Math.ceil(ax.from); t <= ax.to; t++) {
+      // extend the ruler to everything visible on screen, not only the framed bounds
+      const s0 = proj(cam, ax.point(ax.from - 0.5), v), s1 = proj(cam, ax.point(ax.to + 0.5), v);
+      const a0 = isBottom ? s0[0] : s0[1], a1 = isBottom ? s1[0] : s1[1];
+      const per = Math.abs(a1 - a0) / Math.max(1, ax.to - ax.from + 1);
+      const screen = isBottom ? v.width : v.height;
+      const toScreenT = (pos) => ax.from - 0.5 + (pos - a0) / (a1 - a0) * (ax.to - ax.from + 1);
+      const tA = toScreenT(0), tB = toScreenT(screen);
+      const from = Math.ceil(Math.min(tA, tB)), to = Math.floor(Math.max(tA, tB));
+      const span = to - from;
+      const step = span > 300 ? 50 : span > 120 ? 20 : span > 60 ? 10 : 5;
+      for (let t = from; t <= to; t++) {
         const p = ax.point(t);
         const [sx, sy] = proj(cam, p, v);
-        const major = t % step === 0;
+        const major = ((t % step) + step) % step === 0;
+        if (!major && per < 3) continue;
         g.strokeStyle = major ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.55)";
         g.lineWidth = 1;
         g.beginPath();
@@ -178,12 +188,15 @@ function drawOverlay(g, cam, v) {
   }
   if (v.compass) {
     // little compass showing world directions as projected on screen
-    const c = proj(cam, v.target, v);
+    const fw = [v.target[0] - v.eye[0], v.target[1] - v.eye[1], v.target[2] - v.eye[2]];
+    const fl = Math.hypot(...fw) || 1;
+    const ref = [v.eye[0] + fw[0] / fl * 20, v.eye[1] + fw[1] / fl * 20, v.eye[2] + fw[2] / fl * 20];
+    const c = proj(cam, ref, v);
     const dirs = { N: [0, 0, -1], E: [1, 0, 0], S: [0, 0, 1], W: [-1, 0, 0] };
     const cx = v.width - 50, cy = 50;
     g.fillStyle = "rgba(0,0,0,0.45)"; g.beginPath(); g.arc(cx, cy, 38, 0, Math.PI * 2); g.fill();
     for (const [n, d] of Object.entries(dirs)) {
-      const p2 = proj(cam, [v.target[0] + d[0] * 4, v.target[1], v.target[2] + d[2] * 4], v);
+      const p2 = proj(cam, [ref[0] + d[0] * 4, ref[1], ref[2] + d[2] * 4], v);
       let dx = p2[0] - c[0], dy = p2[1] - c[1];
       const L = Math.hypot(dx, dy) || 1; dx /= L; dy /= L;
       g.strokeStyle = n === "N" ? "#ff6b6b" : "#fff"; g.lineWidth = 2;

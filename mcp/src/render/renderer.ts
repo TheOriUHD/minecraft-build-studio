@@ -42,6 +42,7 @@ export interface View {
   clip?: { normal: number[]; constant: number }[];
   rulers?: { u: Ruler; v: Ruler };
   compass?: boolean;
+  clean?: boolean; // no labels/rulers/compass (presentation shots)
 }
 interface Ruler {
   name: string;
@@ -356,7 +357,7 @@ function opp(s: string) {
   return { south: "north", north: "south", east: "west", west: "east" }[s] ?? s;
 }
 
-export async function renderGrid(grid: VoxelGrid, context: VoxelGrid | null, views: string[], opts: { front?: string; width?: number; height?: number; sheet?: number; focus?: Bounds | null; ground?: boolean | "backdrop"; groundY?: number }) {
+export async function renderGrid(grid: VoxelGrid, context: VoxelGrid | null, views: string[], opts: { front?: string; width?: number; height?: number; sheet?: number; focus?: Bounds | null; ground?: boolean | "backdrop"; groundY?: number; clean?: boolean }) {
   const merged = context ? context.clone() : new VoxelGrid();
   merged.overlay(grid);
   // drop air
@@ -366,6 +367,7 @@ export async function renderGrid(grid: VoxelGrid, context: VoxelGrid | null, vie
   if (!focus) throw new Error("nothing to render (the build is empty)");
   const groundY = opts.groundY ?? focus.min[1];
   const vs = makeViews(views, focus, { front: opts.front, width: opts.width, height: opts.height, groundY });
+  if (opts.clean) for (const v of vs) v.clean = true;
   // With world context, a plain backdrop plane continues the ground to the horizon; without it, a measuring grid.
   const r = await renderService.render(cells, (x, y, z) => merged.getId(x, y, z), focus, vs, {
     sheet: opts.sheet,

@@ -1,0 +1,106 @@
+{
+  "name": "sky_lobby",
+  "world": "lobby_void",
+  "origin": [
+    0,
+    64,
+    0
+  ],
+  "rotation": 0,
+  "front": "south",
+  "style": "fantasy temple, stylised",
+  "seed": 201294,
+  "site": {
+    "min": [
+      0,
+      0
+    ],
+    "max": [
+      47,
+      47
+    ]
+  },
+  "palette": {
+    "wall": "smooth_quartz",
+    "trim": "gold_block",
+    "roofmat": "deepslate_tile",
+    "foundation": "polished_deepslate",
+    "accent": "cut_copper",
+    "beam": "stripped_dark_oak_log"
+  },
+  "components": [
+    {
+      "name": "terrain",
+      "enabled": true,
+      "status": "draft",
+      "owner": null
+    },
+    {
+      "name": "satellite",
+      "enabled": true,
+      "status": "draft",
+      "owner": null
+    },
+    {
+      "name": "temple",
+      "enabled": true,
+      "status": "draft",
+      "owner": null
+    },
+    {
+      "name": "temple_interior",
+      "enabled": true,
+      "status": "draft",
+      "owner": null
+    },
+    {
+      "name": "spawn_core",
+      "enabled": true,
+      "status": "draft",
+      "owner": null
+    },
+    {
+      "name": "portals",
+      "enabled": true,
+      "status": "draft",
+      "owner": null
+    },
+    {
+      "name": "paths",
+      "enabled": true,
+      "status": "draft",
+      "owner": null
+    },
+    {
+      "name": "shop",
+      "enabled": true,
+      "status": "draft",
+      "owner": null
+    },
+    {
+      "name": "parkour",
+      "enabled": true,
+      "status": "draft",
+      "owner": null
+    },
+    {
+      "name": "gazebo",
+      "enabled": true,
+      "status": "draft",
+      "owner": null
+    },
+    {
+      "name": "vegetation",
+      "enabled": true,
+      "status": "draft",
+      "owner": null
+    },
+    {
+      "name": "props",
+      "enabled": true,
+      "status": "draft",
+      "owner": null
+    }
+  ],
+  "created": "2026-11-11T23:08:11.412Z"
+}

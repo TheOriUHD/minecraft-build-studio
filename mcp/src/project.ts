@@ -450,8 +450,13 @@ export function finalize(grid: VoxelGrid, warnings: Set<string>, context?: (x: n
       if (!("half" in st.props)) adds.push([x, y, z, formatState({ name: n, props: { ...st.props, half: "lower" } })]);
       const above = grid.get(x, y + 1, z);
       if (!(above && parseState(above).name === n && parseState(above).props.half === "upper")) {
-        if (above !== undefined && grid.getId(x, y + 1, z) !== 0) warnings.add(`${n} at [${x},${y},${z}]: replaced ${above} above it with the door's upper half`);
-        adds.push([x, y + 1, z, formatState({ name: n, props: { ...st.props, half: "upper" } })]);
+        const blocked = above !== undefined && grid.getId(x, y + 1, z) !== 0;
+        if (blocked && DOUBLE_PLANTS.has(n)) {
+          adds.push([x, y, z, n === "large_fern" ? "fern" : "short_grass"]); // no room for a tall plant
+        } else {
+          if (blocked) warnings.add(`${n} at [${x},${y},${z}]: replaced ${above} above it with its upper half`);
+          adds.push([x, y + 1, z, formatState({ name: n, props: { ...st.props, half: "upper" } })]);
+        }
       }
     } else if (n.endsWith("_bed") && !("part" in st.props)) {
       const f = st.props.facing ?? "south";

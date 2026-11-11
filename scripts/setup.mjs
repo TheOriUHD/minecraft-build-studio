@@ -152,3 +152,24 @@ console.log(`
   To use it from anywhere:  claude mcp add minecraft-build --scope user -- node "${path.join(ROOT, "mcp", "node_modules", "tsx", "dist", "cli.mjs")}" "${path.join(ROOT, "mcp", "src", "index.ts")}"
   Join the server in Minecraft ${mc}: Multiplayer → Direct Connect → 127.0.0.1 (offline mode, local only).
 `);
+
+// Optional: make it available to Claude Code everywhere (user-scope MCP + global skill + subagents)
+if (flag("--install-claude")) {
+  const tsx = path.join(ROOT, "mcp", "node_modules", "tsx", "dist", "cli.mjs");
+  const entry = path.join(ROOT, "mcp", "src", "index.ts");
+  try {
+    try {
+      execFileSync("claude mcp remove minecraft-build --scope user", { stdio: "ignore", shell: true });
+    } catch {}
+    execFileSync(`claude mcp add minecraft-build --scope user -- node "${tsx}" "${entry}"`, { stdio: "inherit", shell: true });
+    log("registered MCP server 'minecraft-build' for all Claude Code sessions (user scope)");
+  } catch {
+    log("could not run the `claude` CLI — register manually:", `claude mcp add minecraft-build --scope user -- node "${tsx}" "${entry}"`);
+  }
+  const home = path.join(os.homedir(), ".claude");
+  fs.cpSync(path.join(ROOT, ".claude", "skills", "minecraft-builder"), path.join(home, "skills", "minecraft-builder"), { recursive: true });
+  fs.mkdirSync(path.join(home, "agents"), { recursive: true });
+  for (const f of fs.readdirSync(path.join(ROOT, ".claude", "agents"))) fs.copyFileSync(path.join(ROOT, ".claude", "agents", f), path.join(home, "agents", f));
+  log(`installed skill 'minecraft-builder' and ${fs.readdirSync(path.join(ROOT, ".claude", "agents")).length} build-team agents into ${home}`);
+  console.log("  Restart Claude Code so it picks up the MCP server, skill and agents.");
+}

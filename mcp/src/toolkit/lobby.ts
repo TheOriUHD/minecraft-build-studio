@@ -77,7 +77,7 @@ export function fountain(b: B, c: Vec, o: { r?: number; rim?: string; tiers?: nu
  * Game portal / gate in a facade frame (x along, z toward the viewer). Opening w×h centred at x, base y.
  * inner: "nether_portal" | "end_gateway" | any block (e.g. coloured stained glass) | "air". Banners in `color` hang on the pillars.
  */
-export function portal(f: B, x: number, y: number, o: { w?: number; h?: number; frame?: string; trim?: string; inner?: BlockSpec; color?: string; pad?: BlockSpec | null; arch?: boolean } = {}) {
+export function portal(f: B, x: number, y: number, o: { w?: number; h?: number; frame?: string; trim?: string; inner?: BlockSpec; color?: string; pad?: BlockSpec | null; arch?: boolean; glow?: BlockSpec | boolean } = {}) {
   const w = o.w ?? 3, h = o.h ?? 4;
   const fam = family(o.frame ?? "polished_blackstone_brick");
   const trim = o.trim ? family(o.trim) : family("polished_blackstone");
@@ -108,7 +108,9 @@ export function portal(f: B, x: number, y: number, o: { w?: number; h?: number; 
       if (inner === "nether_portal") f.set([xx, yy, 0], "nether_portal[axis=x]");
       else f.set([xx, yy, 0], inner);
     }
-  if (o.pad !== null) f.fill([x0 - 1, y - 1, 1], [x1 + 1, y - 1, 3], o.pad ?? "polished_blackstone_bricks");
+  // light panel behind coloured glass so the opening reads (glow: true or a light block)
+  if (o.glow) for (let xx = x0; xx <= x1; xx++) for (let yy = y; yy < y + h; yy++) f.set([xx, yy, -1], o.glow === true ? "verdant_froglight[axis=y]" : o.glow);
+  if (o.pad) f.fill([x0 - 1, y - 1, 1], [x1 + 1, y - 1, 3], o.pad);
 }
 
 /** Straight bridge between two points of equal height (x or z aligned), with railings and an optional arch underneath. */

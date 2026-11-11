@@ -142,9 +142,32 @@ export const furniture = {
         b.set([x, a[1], z], `${edge ? colors[0] : colors[1]}_carpet`, { mask: "air" });
       }
   },
-  chandelier(b: F, p: Vec, drop: number, metal = "lantern") {
+  /**
+   * Hanging light. p = the block just under the ceiling, drop = chain length. o.arms (4 or 8) makes a real chandelier:
+   * a ring of lanterns at radius o.r (default 1) on a frame of o.frame (default dark_oak_fence).
+   * o.lantern = "lantern" | "soul_lantern" (a plain string 4th argument also works).
+   */
+  chandelier(b: F, p: Vec, drop: number, o: string | { lantern?: string; arms?: number; r?: number; frame?: string; candles?: boolean } = {}) {
+    const opt = typeof o === "string" ? { lantern: o } : o;
+    const lantern = (opt.lantern ?? "lantern").replace(/\[.*$/, "");
+    if (!/lantern$/.test(lantern)) throw new Error("chandelier: lantern must be 'lantern' or 'soul_lantern', got " + JSON.stringify(opt.lantern));
     for (let i = 0; i < drop; i++) b.set([p[0], p[1] - i, p[2]], "iron_chain[axis=y]");
-    b.set([p[0], p[1] - drop, p[2]], `${metal}[hanging=true]`);
+    const y = p[1] - drop;
+    const arms = opt.arms ?? 0;
+    if (!arms) {
+      b.set([p[0], y, p[2]], `${lantern}[hanging=true]`);
+      return;
+    }
+    const r = opt.r ?? 1;
+    const frame = opt.frame ?? "dark_oak_fence";
+    b.set([p[0], y, p[2]], frame);
+    b.set([p[0], y - 1, p[2]], `${lantern}[hanging=true]`);
+    const dirs: [number, number][] = arms >= 8 ? [[1, 0], [-1, 0], [0, 1], [0, -1], [1, 1], [-1, -1], [1, -1], [-1, 1]] : [[1, 0], [-1, 0], [0, 1], [0, -1]];
+    for (const [dx, dz] of dirs.slice(0, arms)) {
+      for (let k = 1; k <= r; k++) b.set([p[0] + dx * k, y, p[2] + dz * k], frame);
+      b.set([p[0] + dx * r, y - 1, p[2] + dz * r], `${lantern}[hanging=true]`);
+      if (opt.candles) b.set([p[0] + dx * r, y + 1, p[2] + dz * r], "candle[candles=3,lit=true]");
+    }
   },
 };
 
@@ -367,7 +390,7 @@ export function furnish(b: F, a: Vec, c: Vec, o: { type?: string; style?: string
         if (!ceil || isAirish(ceil)) continue;
         // keep lights above walkways; over furniture hang them flush with the ceiling
         const drop = occupied.has(key(x, z)) ? 0 : Math.max(0, H - 4);
-        if (drop > 0) furniture.chandelier(b, [x, y1, z], drop, s.metal);
+        if (drop > 0) furniture.chandelier(b, [x, y1, z], drop, { lantern: s.metal, arms: H >= 6 ? 4 : 0 });
         else b.set([x, y1, z], `${s.metal}[hanging=true]`, { mask: "air" });
         n++;
       }

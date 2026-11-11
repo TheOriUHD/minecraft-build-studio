@@ -169,6 +169,9 @@ export class Builder {
 
   /** Place one block. */
   set(p: Vec, block: BlockSpec, opts: DrawOpts = {}) {
+    if (!Array.isArray(p) || p.length !== 3 || !p.every((v) => Number.isFinite(v)))
+      throw new Error(`set: position must be [x, y, z] numbers, got ${JSON.stringify(p)} (b.each passes [x,y,z] arrays; block-spec functions get {x,y,z,lx,ly,lz})`);
+    if (!p.every(Number.isInteger)) p = [Math.round(p[0]), Math.round(p[1]), Math.round(p[2])];
     const rp = this.toRoot(p);
     if (!this.matches(opts.mask, rp)) return;
     const s = this.resolve(block, p, rp);
@@ -448,7 +451,16 @@ export class Builder {
   }) {
     const mat0 = family(opts.material);
     const trimMat = opts.trim ? family(opts.trim) : null;
-    const ridgeMat = opts.ridgeTrim ? family(opts.ridgeTrim) : null;
+    let ridgeMat: { block: string; stairs: string; slab: string } | null = null;
+    if (opts.ridgeTrim) {
+      try {
+        ridgeMat = family(opts.ridgeTrim);
+      } catch {
+        // a plain block (e.g. "gold_block") without stairs/slabs: use it as a full-block ridge cap
+        const blk = typeof opts.ridgeTrim === "string" ? opts.ridgeTrim : opts.ridgeTrim.block;
+        ridgeMat = { block: blk, slab: blk, stairs: mat0.stairs };
+      }
+    }
     const texMat = opts.texture ? family(opts.texture.material) : null;
     const parts = opts.parts ?? [{ a: opts.a!, b: opts.b!, type: opts.type, axis: opts.axis, lowSide: opts.lowSide }];
     const ov = opts.overhang ?? 1;

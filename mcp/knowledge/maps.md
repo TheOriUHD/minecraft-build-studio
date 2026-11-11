@@ -2,6 +2,8 @@
 
 Large builds (server lobbies, minigame maps, scenic islands, towns) are **compositions**: terrain + a few hero buildings + structured functional areas + organic filler. Plan them like a level designer, build them like a builder.
 
+Create map projects with `create_project {world: "<new name>", world_type: "void", site_size: [200, 200]}`. Name terrain-like components `terrain`, `island…`, `satellite…`, `vegetation`, `props`, `boundary` — renders frame on the buildings by default and ignore those (pass `frame` to choose).
+
 ## 1. Plan the map before any block
 Write a short map plan (post it to `notes`):
 - **Footprint & boundary**: overall size (lobby 120–250 blocks across; small minigame arena 60–120), shape (island, floating islands, valley ringed by mountains, walled city), and how the edge is closed (sea, cliffs, void with rocky undersides, mountain ring, wall). Players must never see an unfinished edge.
@@ -51,7 +53,7 @@ shared.hm = hm;   // later components: const hm = shared.hm (components compile 
 | `lib.spawnPad(b, [x,y,z], {size, height, material, trim})` | raised symmetric spawn platform, stairs on 4 sides, corner lanterns |
 | `lib.plaza(b, [x,y,z], r, {floor, ring, accent, pattern:"rings"/"compass"/"tiles"})` | circular patterned paving |
 | `lib.fountain(b, [x,y,z], {r, rim, tiers})` | tiered fountain (centre of plazas / axes) |
-| `lib.portal(f, x, y, {w, h, frame, trim, inner, color})` | game portal/gate in a facade frame (`b.at(..., {rotate})` / `b.polar`) — inner `nether_portal`, `end_gateway` or coloured glass |
+| `lib.portal(f, x, y, {w, h, frame, trim, inner, color, glow, pad})` | game portal/gate in a facade frame (`b.at(..., {rotate})` / `b.polar`) — inner `nether_portal`, `end_gateway` or coloured glass; `glow: true` puts a light panel behind glass so it reads; `pad` adds a floor pad |
 | `lib.bridge(b, a, c, {width, arch, lamps})` | bridges over rivers/gaps |
 | `lib.statue(b, p, {h, material, cap})` | pedestals/obelisks marking axes and portals |
 | `lib.wall(b, points, y or (x,z)=>y, {h, towers})` | map borders, city walls with towers |

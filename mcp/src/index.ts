@@ -122,7 +122,9 @@ async function readWorldBuild(p: Project): Promise<{ grid: VoxelGrid; bounds: Bo
   return { grid: g, bounds };
 }
 
-async function doRender(p: Project, a: { frame?: string[]; views?: string[]; components?: string[]; hide?: string[]; context?: "auto" | "world" | "none"; source?: "project" | "world"; width?: number; height?: number; separate?: boolean; region?: { min: number[]; max: number[] } }) {
+const TERRAINISH = /^(landscape|landscaping|garden|terrain|site|surroundings|vegetation|veg|props|scatter|island|islands|satellite|ground|water|boundary)/i;
+
+async function doRender(p: Project, a: { clean?: boolean; frame?: string[]; views?: string[]; components?: string[]; hide?: string[]; context?: "auto" | "world" | "none"; source?: "project" | "world"; width?: number; height?: number; separate?: boolean; region?: { min: number[]; max: number[] } }) {
   const m = p.meta();
   const views = a.views?.length ? a.views : ["overview", "front", "right", "top"];
   let grid: VoxelGrid, focus: Bounds | null, extra = "";
@@ -144,7 +146,7 @@ async function doRender(p: Project, a: { frame?: string[]; views?: string[]; com
     focus = grid.bounds();
     if (!focus) throw new Error("nothing to render: the selected components produced no blocks");
     // frame the cameras on the architecture, not on scattered landscaping
-    const frameOn: string[] | undefined = a.frame ?? [...r.perComponent.keys()].filter((n) => !/^(landscape|landscaping|garden|terrain|site|surroundings)/i.test(n));
+    const frameOn: string[] | undefined = a.frame ?? [...r.perComponent.keys()].filter((n) => !TERRAINISH.test(n));
     if (frameOn && frameOn.length && frameOn.length < r.perComponent.size) {
       const fg = new VoxelGrid();
       for (const n of frameOn) {
@@ -169,7 +171,7 @@ async function doRender(p: Project, a: { frame?: string[]; views?: string[]; com
   const groundY = terr.height(Math.round((focus.min[0] + focus.max[0]) / 2), Math.round((focus.min[2] + focus.max[2]) / 2)) + 1;
   // void worlds (nothing below the build): no fake ground plane
   const isVoid = groundY < focus.min[1] - 40;
-  const out = await renderGrid(grid, context, views, { front: m.front ?? "south", width: W, height: H, sheet: per ? (views.length <= 4 ? 2 : 3) : undefined, focus, groundY: isVoid ? focus.min[1] : groundY, ground: isVoid ? false : a.source === "world" ? "backdrop" : true });
+  const out = await renderGrid(grid, context, views, { front: m.front ?? "south", width: W, height: H, sheet: per ? (views.length <= 4 ? 2 : 3) : undefined, focus, groundY: isVoid ? focus.min[1] : groundY, ground: isVoid ? false : a.source === "world" ? "backdrop" : true, clean: a.clean });
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const saved: string[] = [];
   out.images.forEach((img, i) => {
@@ -251,7 +253,7 @@ server.registerTool(
       brief: z.string().default("").describe("design brief: purpose, style, size, mood, references, constraints"),
       world: z.string().optional(),
       origin: z.array(z.number()).length(3).optional(),
-      site_size: z.array(z.number()).length(2).optional().describe("[x, z] size of the reserved site in blocks (default 48×48)"),
+      site_size: z.array(z.number()).length(2).optional().describe("[x, z] size of the reserved site in blocks (default 48×48; use e.g. [200,200] for lobbies/maps)"),
       front: z.enum(["south", "north", "east", "west"]).default("south").describe("which local side is the main facade/entrance"),
       style: z.string().optional(),
       palette: z.record(z.string(), z.any()).optional().describe("named materials, e.g. {wall:'stone_bricks', roof:'dark_oak', trim:'spruce_log'} or weighted mixes [['stone_bricks',5],['cracked_stone_bricks',1]]"),
@@ -290,7 +292,7 @@ server.registerTool(
       try {
         const hm = await p.survey();
         const hs = hm.heights;
-        survey = `Terrain surveyed: height range ${Math.min(...hs)}..${Math.max(...hs)} (local y).`;
+        survey = Math.max(...hs) < -100 ? "Void world: no terrain under the site (build your own landmass with lib.heightmap)." : `Terrain surveyed: height range ${Math.min(...hs)}..${Math.max(...hs)} (local y).`;
       } catch (e: any) {
         survey = `Survey failed: ${e.message}`;
       }
@@ -419,11 +421,12 @@ async function afterWrite(p: Project, name: string, preview?: string[]) {
   try {
     r = p.compile();
   } catch (e: any) {
-    return text(`Saved '${name}', but the project does not compile:\n${e.message}`);
+    const other = !String(e.message).includes(`'${name}'`);
+    return text(`Saved '${name}', but the project does not compile${other ? " because of ANOTHER component (yours may be fine)" : ""}:\n${e.message}`);
   }
   const summary = compileSummary(r);
   if (preview && preview.length) {
-    const rr = await doRender(p, { views: preview });
+    const rr = await doRender(p, { views: preview, frame: TERRAINISH.test(name) ? undefined : [name] });
     rr.content.push({ type: "text", text: summary });
     return rr;
   }
@@ -615,6 +618,7 @@ server.registerTool(
       width: z.number().optional(),
       height: z.number().optional(),
       separate: z.boolean().default(false).describe("return one image per view instead of a contact sheet"),
+      clean: z.boolean().default(false).describe("presentation shots: no labels, rulers or compass"),
     },
   },
   wrap(async (a: any) => doRender(proj(a.project), a)),

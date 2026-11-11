@@ -36,7 +36,7 @@ Write reusable house-style modules there (window style, buttress, bay, dormer) s
 Single pieces (wall frame: x along the wall, z into the room, z=0 touches the wall):
 `lib.furniture.bed(f,x,style,{w})`, `.wardrobe`, `.bookshelf(f,x,w,style,{h})`, `.desk`, `.counter(f,x,w,style)`, `.fireplace(f,x,style,ceilingY)`,
 `.sofa(f,x,w,style)`, `.storage(f,x,w)`, `.workbench(f,x)`, `.bar(f,x,w,style)`, `.plant(f,x)`;
-room-frame pieces: `.table(b,[x,y,z],w,d,style)`, `.rug(b,a,c,[border,inner])`, `.chandelier(b,[x,ceilY,z],drop,metal)`. Styles: `lib.styles`.
+room-frame pieces: `.table(b,[x,y,z],w,d,style)`, `.rug(b,a,c,[border,inner])`, `.chandelier(b,[x,ceilY,z],drop,{lantern:"lantern"|"soul_lantern", arms:0|4|8, r:1, frame:"dark_oak_fence", candles})`. Styles: `lib.styles`.
 Get wall frames with `b.at([x,y,z], {rotate})` (rotate 0: wall to the north, room toward +z).
 
 Workflow for interiors: partitions + doors + stairs (with openings in the floor above) → `lib.furnish` per room → hand-place

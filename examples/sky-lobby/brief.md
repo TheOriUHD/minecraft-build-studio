@@ -1,0 +1,1 @@
+Floating-island server lobby: symmetric spawn core with 4 colour-themed portals, hero temple on a hill at the north end of the main axis, secondary zones (shop pavilion, parkour tower, viewpoint gazebo), organic terrain and forests.

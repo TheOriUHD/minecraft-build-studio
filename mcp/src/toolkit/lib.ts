@@ -62,7 +62,7 @@ export function makeLib(terrain: Terrain) {
     },
 
     /** Door in a facade frame at x (left column), floor y. width 1 or 2. Places both halves, carves the wall. */
-    door(f: F, x: number, y: number, o: { wood?: string; width?: 1 | 2; wall?: number; frame?: BlockSpec | null; awning?: string | null; step?: string | null; inset?: number } = {}) {
+    door(f: F, x: number, y: number, o: { wood?: string; width?: 1 | 2; wall?: number; frame?: BlockSpec | null; awning?: string | null; step?: string | boolean | null; inset?: number } = {}) {
       const wood = o.wood ?? "spruce";
       const width = o.width ?? 1, wall = o.wall ?? 1, inset = o.inset ?? 0;
       f.fill([x, y, 0], [x + width - 1, y + 2, -(wall - 1)], "air");
@@ -81,7 +81,7 @@ export function makeLib(terrain: Terrain) {
         for (let i = -1; i <= width; i++) f.set([x + i, y + 3, 2], `${s}[facing=north,half=bottom]`);
       }
       if (o.step) {
-        const s = family(o.step).stairs;
+        const s = family(typeof o.step === "string" ? o.step : "stone_brick").stairs;
         for (let i = 0; i < width; i++) f.set([x + i, y - 1, 1], `${s}[facing=north,half=bottom]`);
       }
     },

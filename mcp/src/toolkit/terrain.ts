@@ -259,7 +259,11 @@ export class HeightMap {
         if (o.mask && !o.mask(x, z)) continue;
         const top = this.at(x, z);
         if (o.cutoff !== undefined) {
-          if (this.raw(x, z) < o.cutoff) continue; // "no land here" (void maps / floating islands)
+          if (this.raw(x, z) < o.cutoff) {
+            // a basin dug below the cutoff inside the island (lake) would punch a hole into the void: keep it as land
+            if (this.surroundedByLand(x, z, o.cutoff)) this.set(x, z, o.cutoff);
+            else continue; // "no land here" (void maps / floating islands)
+          }
           // drop stray specks: need at least 4 of the 8 neighbours to be land
           let nb = 0;
           for (let dz = -1; dz <= 1; dz++) for (let dx = -1; dx <= 1; dx++) if ((dx || dz) && this.inside(x + dx, z + dz) && this.raw(x + dx, z + dz) >= o.cutoff) nb++;
@@ -267,7 +271,7 @@ export class HeightMap {
         }
         const s = this.slope(x, z);
         const minN = Math.min(...[[1, 0], [-1, 0], [0, 1], [0, -1]].map(([dx, dz]) => (o.cutoff !== undefined && this.raw(x + dx, z + dz) < o.cutoff ? top - depth : this.at(x + dx, z + dz))));
-        const under = water !== null && top < water;
+        const under = water !== null && top < water && !(o.floating && o.cutoff !== undefined && this.edgeDistance(x, z, o.cutoff) <= 4);
         let surface: BlockSpec;
         if (under) surface = P.seabed!;
         else if (s >= cliffSlope) surface = P.cliff!;
@@ -293,6 +297,13 @@ export class HeightMap {
         if (o.clearAbove) for (let y = Math.max(top, water ?? top) + 1; y <= Math.max(top, water ?? top) + o.clearAbove; y++) b.set([x, y, z], "air", { mask: "empty" });
       }
     return this;
+  }
+  /** true if land (>= cut) exists in all 4 directions within 25 blocks, i.e. this column is enclosed by the landmass */
+  surroundedByLand(x: number, z: number, cut: number) {
+    return [[1, 0], [-1, 0], [0, 1], [0, -1]].every(([dx, dz]) => {
+      for (let i = 1; i <= 25; i++) if (this.inside(x + dx * i, z + dz * i) && this.raw(x + dx * i, z + dz * i) >= cut) return true;
+      return false;
+    });
   }
   private edgeCache?: Map<string, number>;
   /** Distance (blocks) to the nearest column below `cut` (= outside the landmass), approximated by a ring search. */

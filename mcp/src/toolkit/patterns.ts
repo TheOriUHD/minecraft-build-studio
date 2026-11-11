@@ -11,9 +11,16 @@ export type BlockSpec =
   | ((p: { x: number; y: number; z: number; lx: number; ly: number; lz: number }) => BlockSpec);
 
 export function hash3(x: number, y: number, z: number, seed: number): number {
-  let h = (x * 374761393 + y * 668265263 + z * 2147483647 + seed * 144269504) | 0;
-  h = Math.imul(h ^ (h >>> 13), 1274126177);
-  h = h ^ (h >>> 16);
+  // 32-bit integer mixing per axis (Math.imul keeps every term exact for any seed)
+  let h = (seed | 0) ^ 0x9e3779b9;
+  h = Math.imul(h ^ (x | 0), 0x85ebca6b);
+  h ^= h >>> 13;
+  h = Math.imul(h ^ (y | 0), 0xc2b2ae35);
+  h ^= h >>> 16;
+  h = Math.imul(h ^ (z | 0), 0x27d4eb2f);
+  h ^= h >>> 15;
+  h = Math.imul(h, 0x85ebca6b);
+  h ^= h >>> 13;
   return (h >>> 0) / 4294967296;
 }
 
