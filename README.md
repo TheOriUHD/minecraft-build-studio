@@ -11,6 +11,7 @@ Designed in code, **seen** through a real renderer, critiqued, revised, then pla
 ![Claude Code](https://img.shields.io/badge/Claude%20Code-skill%20%2B%20agents-D97757?style=flat-square)
 ![Minecraft](https://img.shields.io/badge/Minecraft-Java%20%C2%B7%20Paper-62B47A?style=flat-square)
 ![WorldEdit](https://img.shields.io/badge/.schem-WorldEdit%20%2F%20FAWE-4A90D9?style=flat-square)
+![License](https://img.shields.io/badge/license-MIT-lightgrey?style=flat-square)
 
 <img src="docs/images/lobby-turntable.gif" width="720" alt="A floating-island server lobby built entirely by an AI agent"/>
 
@@ -208,3 +209,4 @@ runtime/  projects/                         generated locally (not committed)
 - The bridge and test server listen on `127.0.0.1` only. Set a `token` in `runtime/server/plugins/BuildMCPBridge/config.yml` and `BUILDMCP_BRIDGE_TOKEN` if others share the machine.
 - Component scripts run in a Node `vm` context, which is not a security sandbox. Only open projects you trust.
 - Minecraft textures and models are extracted locally from the official client jar and are never redistributed. *Minecraft* is a trademark of Mojang/Microsoft; this project is not affiliated with them.
+- License: [MIT](LICENSE).
