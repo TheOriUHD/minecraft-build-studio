@@ -4,7 +4,7 @@
 import { VoxelGrid } from "../voxel.ts";
 import { IDENTITY, Orient, compose, rotVec, transformState } from "../blocks/transform.ts";
 import { PALETTE, parseState, formatState, isAir } from "../blocks/state.ts";
-import { BlockSpec, ResolveCtx, Vec, resolveSpec } from "./patterns.ts";
+import { BlockSpec, ResolveCtx, Vec, resolveSpec, noise3 } from "./patterns.ts";
 import { assets } from "../blocks/assets.ts";
 
 export interface Sink {
@@ -406,8 +406,14 @@ export class Builder {
     underside?: BlockSpec | null; // block placed under each roof cell inside the footprint (ceiling/shell)
     ridge?: "slab" | "block" | "none";
     hollow?: boolean;
+    trim?: string | { stairs: string; slab: string; block: string } | null; // contrasting outline on eaves + rakes
+    ridgeTrim?: string | { stairs: string; slab: string; block: string } | null; // material for the ridge cap
+    texture?: { material: string; amount?: number; scale?: number } | null; // clustered second material on the planes
   }) {
-    const mat = family(opts.material);
+    const mat0 = family(opts.material);
+    const trimMat = opts.trim ? family(opts.trim) : null;
+    const ridgeMat = opts.ridgeTrim ? family(opts.ridgeTrim) : null;
+    const texMat = opts.texture ? family(opts.texture.material) : null;
     const parts = opts.parts ?? [{ a: opts.a!, b: opts.b!, type: opts.type, axis: opts.axis, lowSide: opts.lowSide }];
     const ov = opts.overhang ?? 1;
     const gov = opts.gableOverhang ?? ov;
@@ -415,10 +421,11 @@ export class Builder {
     const rises = Array.isArray(opts.pitch) ? opts.pitch : null;
     const p = typeof opts.pitch === "number" ? opts.pitch : 1;
     // cumulative surface height (in half blocks) after d steps
+    // (cumulative rounding, so fractional pitches like 0.75 / 1.5 average out correctly)
     const T = (d: number) => {
       let t = 0;
-      for (let i = 0; i < d; i++) t += Math.round(2 * (rises ? rises[Math.min(i, rises.length - 1)] : p));
-      return t;
+      for (let i = 0; i < d; i++) t += rises ? rises[Math.min(i, rises.length - 1)] : p;
+      return Math.round(2 * t);
     };
     // Heightfield over union of parts (expanded by overhang), measured in "distance" units then converted.
     const H = new Map<string, number>(); // half-block surface height relative to base
@@ -459,8 +466,17 @@ export class Builder {
       : null;
     const N: [string, number, number][] = [["north", 0, -1], ["south", 0, 1], ["east", 1, 0], ["west", -1, 0]];
     const base = opts.y;
+    const isEdge = (x: number, z: number) => N.some(([, dx, dz]) => !H.has(`${x + dx},${z + dz}`));
+    const tex = opts.texture;
+    const matAt = (x: number, z: number, ridgeCell = false) => {
+      if (ridgeCell && ridgeMat) return ridgeMat;
+      if (trimMat && isEdge(x, z)) return trimMat;
+      if (texMat && tex && noise3(x, 0, z, tex.scale ?? 2.5, 4242) < (tex.amount ?? 0.3)) return texMat;
+      return mat0;
+    };
     for (const [k, h] of H) {
       const [x, z] = k.split(",").map(Number);
+      let mat = matAt(x, z);
       // up-slope neighbour: highest neighbour, ties broken towards the roof centre
       let best: string | null = null, bestH = h, bestT = -Infinity, tie: string | null = null;
       const slopeAxisZ = firstGableAxis ? firstGableAxis === "x" : maxX - minX >= maxZ - minZ;
@@ -482,18 +498,19 @@ export class Builder {
       const y = base + Math.floor(h / 2);
       const halfUp = h % 2 !== 0;
       if (best && delta >= 2) {
-        if (halfUp) this.set([x, y, z], `${mat.slab}[type=top]`);
+        if (halfUp) this.set([x, y, z], mat.block); // full block (a top slab would leave a see-through gap)
         const sy = halfUp ? y + 1 : y;
-        if (delta >= 4) {
-          this.set([x, sy, z], mat.block);
-          this.set([x, sy + 1, z], `${mat.stairs}[facing=${best},half=bottom]`);
-        } else this.set([x, sy, z], `${mat.stairs}[facing=${best},half=bottom]`);
+        // rise to the up-slope neighbour's surface: full blocks, then a stair for the last block of rise
+        const r = Math.floor((bestH - (halfUp ? h + 1 : h)) / 2);
+        for (let i = 0; i < r - 1; i++) this.set([x, sy + i, z], mat.block);
+        this.set([x, sy + Math.max(0, r - 1), z], `${mat.stairs}[facing=${best},half=bottom]`);
       } else if (best && delta === 1) {
         if (halfUp) this.set([x, y, z], `${mat.slab}[type=bottom]`);
         else this.set([x, y - 1, z], `${mat.slab}[type=top]`);
       } else {
         // ridge / flat cell
         const ridge = opts.ridge ?? "slab";
+        if (ridgeMat && !tie) mat = ridgeMat;
         if (tie && !halfUp && h > 0 && !parts.every((pt) => pt.type === "flat")) {
           this.set([x, y, z], `${mat.stairs}[facing=${tie},half=bottom]`);
         } else if (halfUp) this.set([x, y, z], `${mat.slab}[type=bottom]`);
@@ -515,9 +532,10 @@ export class Builder {
       let lowest = Infinity;
       for (const [, dx, dz] of N) {
         const nh = H.get(`${x + dx},${z + dz}`);
-        if (nh !== undefined) lowest = Math.min(lowest, base + Math.floor(nh / 2));
+        // a half-height neighbour (bottom slab) leaves its upper half open → our column must cover that level too
+        if (nh !== undefined && nh < h) lowest = Math.min(lowest, base + Math.floor(nh / 2) + (nh % 2 ? 0 : 1));
       }
-      for (let yy = lowest + 1; yy <= y - 1; yy++) this.set([x, yy, z], mat.block, { mask: "empty" });
+      for (let yy = lowest; yy <= y - 1; yy++) this.set([x, yy, z], mat0.block, { mask: "empty" });
     }
     if (opts.gable) {
       for (const [x, z] of gableCells) {

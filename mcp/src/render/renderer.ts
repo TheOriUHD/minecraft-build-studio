@@ -65,6 +65,7 @@ class RenderService {
         const u = (req.url ?? "/").split("?")[0];
         try {
           if (u === "/" || u === "/page.html") return send(res, fs.readFileSync(PAGE), "text/html");
+          if (u === "/favicon.ico") return res.writeHead(204).end();
           if (u.startsWith("/three/")) {
             const f = path.join(THREE_DIR, path.basename(u));
             return send(res, fs.readFileSync(f), "text/javascript");
@@ -167,7 +168,8 @@ export const VIEW_HELP = `Views: front, back, left, right (orthographic elevatio
 iso_ne / iso_nw / iso_se / iso_sw (3/4 perspective from that corner), overview (= front-right 3/4),
 street (eye-level perspective in front of the main facade), plan_y=<y> (floor plan: everything above y cut away),
 section_x=<x> / section_z=<z> (vertical cut looking at the cut face), detail:<x>,<y>,<z>[,<radius>] (close-up), cutaway_y=<y>[,ne|nw|se|sw] (dollhouse 3/4 view with everything above y removed — use for interiors),
-eye:<x>,<y>,<z>,<yaw>[,<pitch>[,<fov>]] (first-person view standing in block x,y,z; yaw 0=south,90=west,180=north,-90=east — use inside rooms),
+eye:<x>,<y>,<z>,<yaw>[,<pitch>[,<fov>]] (first-person view standing in block x,y,z, Minecraft yaw: 0=south,90=west,180=north,-90=east; default fov 75),
+room:<x0>,<y0>,<z0>,<x1>,<y1>,<z1>[,ne|nw|se|sw] (wide view of a whole room from a corner — pass the room's interior air box; best interior check),
 cam:<ex>,<ey>,<ez>,<tx>,<ty>,<tz>[,<fov>] (custom perspective camera).`;
 
 const SIDES: Record<string, { dir: [number, number, number]; right: [number, number, number] }> = {
@@ -318,6 +320,24 @@ export function makeViews(names: string[], b: Bounds, opts: { front?: string; wi
       const e = [x + 0.5, y + 1.62, z + 0.5];
       const d = [-Math.sin(yr) * Math.cos(pr), -Math.sin(pr), Math.cos(yr) * Math.cos(pr)];
       views.push({ name, title: `eye view from ${x},${y},${z} yaw ${yaw}`, kind: "persp", fov, eye: e, target: [e[0] + d[0], e[1] + d[1], e[2] + d[2]], width: W, height: H, compass: true });
+      continue;
+    }
+    const room = /^room:(-?\d+),(-?\d+),(-?\d+),(-?\d+),(-?\d+),(-?\d+)(?:,(ne|nw|se|sw))?$/.exec(name);
+    if (room) {
+      // stand in one corner of a room (its interior air box) and look at the opposite corner, wide angle
+      const [ax, ay, az, bx, , bz] = room.slice(1, 7).map(Number);
+      const by = Number(room[5]);
+      const x0 = Math.min(ax, bx), x1 = Math.max(ax, bx), z0 = Math.min(az, bz), z1 = Math.max(az, bz), y0 = Math.min(ay, by), y1 = Math.max(ay, by);
+      let corner = room[7];
+      if (!corner) {
+        const f = SIDES[front];
+        corner = (f.dir[2] > 0 ? "s" : f.dir[2] < 0 ? "n" : "s") + (f.dir[0] > 0 ? "e" : "w");
+      }
+      const ex = corner.includes("e") ? x1 + 0.8 : x0 + 0.2, ez = corner.includes("s") ? z1 + 0.8 : z0 + 0.2;
+      const tx = corner.includes("e") ? x0 : x1 + 1, tz = corner.includes("s") ? z0 : z1 + 1;
+      // "security camera": just under the ceiling in the corner, looking down across the room to the far floor corner
+      const eyeY = y1 + 0.75;
+      views.push({ name, title: `room view from ${corner.toUpperCase()} ceiling corner`, kind: "persp", fov: 95, eye: [ex, eyeY, ez], target: [tx, y0 + 0.2, tz], width: W, height: H, compass: true });
       continue;
     }
     const cam = /^cam:(.+)$/.exec(name);

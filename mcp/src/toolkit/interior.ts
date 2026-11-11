@@ -170,8 +170,8 @@ const ITEMS = (s: Style, rng: () => number): Record<string, ItemDef[]> => {
       if (i % 2 === 1) f.set([x + i, 1, 0], i % 4 === 1 ? "flower_pot" : "candle[candles=2,lit=true]");
     }
   });
-  const bed2 = it("double bed", 4, 2, 1, (f, x) => furniture.bed(f, x + 1, s, { w: 2 }));
-  const bed1 = it("bed", 3, 2, 1, (f, x) => furniture.bed(f, x + 1, s, { w: 1 }));
+  const bed1 = it("bed", 3, 2, 1, (f, x) => furniture.bed(f, x + 1, s, { w: 1 }), it("bed (no nightstands)", 1, 2, 1, (f, x) => furniture.bed(f, x, s, { w: 1, nightstands: false })));
+  const bed2 = it("double bed", 4, 2, 1, (f, x) => furniture.bed(f, x + 1, s, { w: 2 }), bed1);
   const wardrobe = it("wardrobe", 2, 2, 3, (f, x) => furniture.wardrobe(f, x, s), chests(2));
   const shelf3 = it("bookshelf", 3, 1, 3, (f, x) => furniture.bookshelf(f, x, 3, s), lowShelf(3));
   const shelf2 = it("bookshelf", 2, 1, 3, (f, x) => furniture.bookshelf(f, x, 2, s), lowShelf(2));
@@ -183,6 +183,8 @@ const ITEMS = (s: Style, rng: () => number): Record<string, ItemDef[]> => {
   const bench = it("workbench", 3, 1, 1, (f, x) => furniture.workbench(f, x));
   const bar = it("bar", 5, 4, 2, (f, x) => furniture.bar(f, x, 5, s));
   const plant = it("plant", 1, 1, 1, (f, x) => furniture.plant(f, x));
+  const table = it("table", 0, 0, 0, () => {}); // handled by the centre logic
+  void table;
   void rng;
   return {
     bedroom: [bed2, wardrobe, shelf2, desk, storage(2), plant, plant],
@@ -291,7 +293,29 @@ export function furnish(b: F, a: Vec, c: Vec, o: { type?: string; style?: string
   };
 
   const all = ITEMS(s, rng);
-  const list = o.items ? o.items.flatMap((n) => Object.values(all).flat().filter((i) => i.name === n).slice(0, 1)) : all[o.type ?? "living"] ?? all.living;
+  const byName = new Map<string, ItemDef>();
+  for (const i of Object.values(all).flat()) {
+    const n = i.name.replace(/ /g, "_");
+    if (!byName.has(n)) byName.set(n, i);
+    if (i.alt && !byName.has(i.alt.name.replace(/ /g, "_"))) byName.set(i.alt.name.replace(/ /g, "_"), i.alt);
+  }
+  let list: ItemDef[];
+  if (o.items) {
+    list = [];
+    for (const raw of o.items) {
+      const n = raw.replace(/ /g, "_");
+      if (n === "table") { o.table = true; continue; }
+      if (n === "rug") { o.rug = true; continue; }
+      const i = byName.get(n);
+      if (i) list.push(i);
+      else report.push(`(unknown item '${raw}' — known: ${[...byName.keys()].join(", ")}, table, rug)`);
+    }
+  } else {
+    if (o.type && !all[o.type]) report.push(`(unknown room type '${o.type}', using living — types: ${Object.keys(all).join(", ")})`);
+    list = all[o.type ?? "living"] ?? all.living;
+  }
+  const touchesWall = wallInfo.some((w) => w.hgt.some((h) => h > 0));
+  if (!touchesWall) report.push("(no solid wall found directly outside the box — the box must be the room's interior air volume, one block inside the walls)");
   // place biggest first, try walls in order of free length, positions centred-ish
   for (const item of list) {
     let done = false;

@@ -134,7 +134,12 @@ async function doRender(p: Project, a: { frame?: string[]; views?: string[]; com
     focus = w.bounds;
     extra = "Rendered from the live world.";
   } else {
-    const r = p.compile({ only: a.components, skip: a.hide });
+    // interior views: hide landscaping (trees cover the dollhouse) unless the caller chose components
+    let hide = a.hide;
+    if (!a.components && !a.hide && views.every((v) => /^(cutaway_y=|eye:|room:|plan_y=)/.test(v))) {
+      hide = m.components.map((c) => c.name).filter((n) => /^(landscape|landscaping|garden|terrain|site|surroundings)/i.test(n));
+    }
+    const r = p.compile({ only: a.components, skip: hide });
     grid = r.grid;
     focus = grid.bounds();
     if (!focus) throw new Error("nothing to render: the selected components produced no blocks");
@@ -241,7 +246,7 @@ server.registerTool(
     description: "Create a new build project. If no origin is given, a free plot is reserved in the flat 'build_flat' test world. For real terrain, pass world + origin (the local [0,0,0] corner; y = first block above ground) and call survey_site.",
     inputSchema: {
       name: z.string().describe("letters, digits, _ -"),
-      brief: z.string().describe("design brief: purpose, style, size, mood, references, constraints"),
+      brief: z.string().default("").describe("design brief: purpose, style, size, mood, references, constraints"),
       world: z.string().optional(),
       origin: z.array(z.number()).length(3).optional(),
       site_size: z.array(z.number()).length(2).optional().describe("[x, z] size of the reserved site in blocks (default 48×48)"),

@@ -37,6 +37,15 @@ Every builder has an origin and orientation. Child frames:
 
 Design a bay/window/tower once as a function `(f, opts) => {...}` and place it with frames.
 
+### Rotations of child frames (`b.at(o, {rotate})`, quarter turns clockwise seen from above)
+| rotate | local +x points | local +z points | typical use |
+|---|---|---|---|
+| 0 | east | south | room frame with the wall to the north (z toward the room) |
+| 1 | south | west | wall on the east side, room toward −x |
+| 2 | west | north | wall on the south side |
+| 3 | north | east | wall on the west side, room toward +x |
+`b.around` already gives you the four outward-facing facade frames.
+
 ## Drawing
 ```
 b.set(p, block, {mask})            b.get(p) → state|undefined     b.unset(p)
@@ -68,15 +77,16 @@ b.roof({ a:[x0,z0], b:[x1,z1], y, type:"gable"|"hip"|"shed"|"flat", axis:"x"|"z"
          gable: "$wall" | null, underside: block|null, ridge: "slab"|"block"|"none", lowSide })
 b.roof({ parts: [{a,b,type,axis}, {a,b,type,axis}], y, ... })   // L/T/cross plans: heights merge → real valleys
 ```
+- `trim: "dark_oak"` → contrasting outline on every eave and rake edge (the expert "line-work" look); `ridgeTrim: "stone_brick"` → ridge cap material; `texture: {material:"spruce", amount:0.25, scale:2.5}` → clustered second material so big planes aren't monotone. Use all three on any roof larger than ~8×8.
 - `a,b` = wall footprint corners (x,z). `y` = first layer above the wall top (wallTop + 1).
-- `axis` = ridge direction. `pitch`: 0.5 (slabs, shallow), 1 (stairs, 45°), 2 (steep), or a list of rises per step: `[2,2,1,1,0.5]` = gambrel/bell curve.
+- `axis` = ridge direction. `pitch`: rise per block of run — any value works (0.5 shallow slabs, 0.75, 1 = 45° stairs, 1.5, 2 steep, 3 very steep), or a list of rises per step from the eave inward (the first entries apply to the overhang cells): `[1,1,2,2,2]` = bell/steepening, `[2,2,1,1,0.5]` = gambrel.
 - `overhang` cells extend past the walls (and drop by pitch). `gable` fills the triangular gable end walls.
 - Stair corner shapes (hips/valleys) are computed automatically.
 - Hip on a long rectangle → ridge along the long axis. Use `parts` for wings; a tower roof is usually a separate `cone` or steep hip.
 
 ## Automatic finishing (done for you)
 - fences, walls, panes, iron bars connect to neighbours; stair corner shapes are computed (unless you set those props explicitly)
-- doors / tall flowers get both halves; `"red_bed[facing=south]"` gets foot + head; leaves become persistent
+- doors / tall flowers get both halves (the upper half overwrites whatever is above — a warning tells you); `"red_bed[facing=south]"` gets foot + head; leaves become persistent
 - placing in the world uses no physics (floating sand stays, water does not flow far)
 
 ## Materials helper
@@ -102,3 +112,12 @@ b.roof({a:[0,0], b:[W-1,D-1], y:H, type:"gable", axis:"x", material:"$roofmat" /
 b.anchor("door", [Math.floor(W/2), 0, D]);
 ```
 (`material`, `sill`, `awning` etc. accept a base material name, `{stairs,slab,block}`, or a palette ref like `"$roofmat"` whose entry is a plain material name such as `"deepslate_tile"`.)
+
+## Tool quick reference (MCP arguments)
+- `create_project {name, brief?, palette?, front?, style?, world?, origin?, site_size?, template?}`
+- `write_component {project, name, code, description?, position?: "end"|"before:<c>"|"after:<c>", params?, preview?: [views], agent?}`
+- `edit_component {project, name, old, new, all?, preview?}` · `read_component {project, name}` · `component_settings {project, name, enabled?, move?, owner?, status?, offset?, delete?}`
+- `render {project, views?, components?, hide?, frame?, context?: auto|world|none, source?: project|world, region?, separate?}`
+- `inspect {project, kind: stats|slice|blocks|interior, axis?, at?, min?, max?, entry?}`
+- `apply {project, label?}` · `checkpoints {project, restore?}` · `export_schematic {project}`
+- Sections (`section_x=` / `section_z=`) show the cut open: you look into the cut blocks, so stairs/roofs can look like floating pieces — use `inspect kind:"slice"` for exact profiles.

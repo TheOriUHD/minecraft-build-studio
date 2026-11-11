@@ -5,7 +5,7 @@ Facade functions take a facade frame `f` from `b.around(...)` (x along the wall 
 | function | purpose |
 |---|---|
 | `lib.window(f, x, y, {w=1, h=2, glass="glass_pane", wall=1, inset, sill, lintel, shutters, frame, arch})` | carves the opening through `wall` blocks, puts glass at `-inset` (default 0 for 1-thick walls, 1 for thicker), optional sill (material → upside-down stairs at z=1), lintel block above, shutters (trapdoor id, open on the wall face), frame block around, arch style "round"/"pointed"/"segmental" |
-| `lib.door(f, x, y, {wood="spruce", width=1|2, wall=1, frame, awning, step, inset})` | door(s) with both halves, carved wall, optional frame, awning (stairs), step |
+| `lib.door(f, x, y, {wood="spruce", width=1|2, wall=1, frame, awning, step, inset})` | door(s) with both halves, carved wall, optional frame (posts + lintel at z=1), awning (stairs), step. Keep z=1 in front of the door free in later components. |
 | `lib.column(b, base, h, {shaft, base, capital})` | column/pillar |
 | `lib.timberFrame(f, width, height, {post, beam, spacing=4, floors:[ys], braces, z})` | timber framing posts/beams/braces on a facade |
 | `lib.chimney(b, base, h, {material, cap, smoke})` | chimney stack (smoke = campfire inside top) |
@@ -30,7 +30,8 @@ Write reusable house-style modules there (window style, buttress, bay, dormer) s
   (log it: `log(lib.furnish(...).join("; "))`).
 - type: bedroom | kids | living | kitchen | dining | study | storage | workshop | tavern | hall
 - style: rustic | medieval | nordic | noble | light | desert | fantasy | modern, or {wood, accent, stone, rug:[border,inner], bed, metal}
-- items: explicit list of piece names instead of the type preset.
+- items: explicit list of piece names instead of the type preset: `double_bed, bed, wardrobe, bookshelf, low_bookshelf, desk, fireplace, sofa, kitchen_counter, low_counter, storage, chests, workbench, bar, plant, table, rug`. Unknown names are reported in the result.
+- Tall pieces (wardrobe, bookshelf, counter with wall shelf, fireplace) need solid wall behind them; under windows the low variant is used automatically. A double bed falls back to a single bed in narrow rooms. Rooms narrower than 4 get few pieces — hand-place there.
 
 Single pieces (wall frame: x along the wall, z into the room, z=0 touches the wall):
 `lib.furniture.bed(f,x,style,{w})`, `.wardrobe`, `.bookshelf(f,x,w,style,{h})`, `.desk`, `.counter(f,x,w,style)`, `.fireplace(f,x,style,ceilingY)`,

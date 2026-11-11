@@ -38,7 +38,7 @@ Fix the 1–3 worst problems with `edit_component`, re-render, repeat. Budget: ~
 
 What experts do that beginners don't (from studying professional server maps — see craft §9):
 - big variety (90–130 block types in a finished map), 15–30 % sub-block shapes
-- contrasting outlines on every roof edge, hip and ridge; tiered/flared roofs; patterned roof planes
+- contrasting outlines on every roof edge, hip and ridge (`b.roof({... trim, ridgeTrim, texture})`); tiered/flared roofs; patterned roof planes
 - weathering gradients rising from the base; dark plinth line
 - horizontal layering on facades (base / main storey / attic, cornices, frieze bands), a projecting taller central element
 - many props clustered at doors/corners; custom organic trees; one dominant landmark per scene
@@ -46,7 +46,7 @@ What experts do that beginners don't (from studying professional server maps —
 ## 4. Interiors (do them properly)
 - Plan rooms by use; every room gets a floor change, light, a focal piece, wall furniture, clutter and a clear path from the door. Ceilings ≥ 3 clear, beams every 3–4 blocks.
 - In an `interior` component after walls/openings: partitions + doors, stairs + floor openings (+ railing), ceilings, then `log(lib.furnish(b, airMin, airMax, {type, style}).join("; "))` per room. Read the log: skipped pieces mean you should hand-place them or change the room.
-- Verify: `render` views `cutaway_y=<floor+3>` (dollhouse) and `eye:x,y,z,yaw` (standing in the room), and `inspect kind:"interior"` per room → no dark cells, everything reachable from the door, density ~0.6–1.5.
+- Verify: `render` views `room:<air box>` (whole room from a corner), `cutaway_y=<floor+3>` (dollhouse) and `eye:x,y,z,yaw` (standing in the room), and `inspect kind:"interior"` per room → no dark cells, everything reachable from the door, density ~0.6–1.5.
 
 ## 5. Apply & verify in the world
 `apply` (writes only the diff, keeps undo checkpoints) → `render source:"world"` to verify what Minecraft actually has → `export_schematic` for a `.schem`. Use `checkpoints` to roll back. `server action:"teleport"` puts a watching player in front of the build.

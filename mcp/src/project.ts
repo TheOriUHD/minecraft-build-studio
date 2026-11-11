@@ -445,9 +445,13 @@ export function finalize(grid: VoxelGrid, warnings: Set<string>, context?: (x: n
     const n = st.name;
     if (n.endsWith("_leaves") && !("persistent" in st.props)) {
       adds.push([x, y, z, formatState({ name: n, props: { ...st.props, persistent: "true" } })]);
-    } else if ((n.endsWith("_door") || DOUBLE_PLANTS.has(n)) && !("half" in st.props)) {
-      adds.push([x, y, z, formatState({ name: n, props: { ...st.props, half: "lower" } })]);
-      if (grid.get(x, y + 1, z) === undefined || grid.getId(x, y + 1, z) === 0) adds.push([x, y + 1, z, formatState({ name: n, props: { ...st.props, half: "upper" } })]);
+    } else if ((n.endsWith("_door") || DOUBLE_PLANTS.has(n)) && st.props.half !== "upper") {
+      if (!("half" in st.props)) adds.push([x, y, z, formatState({ name: n, props: { ...st.props, half: "lower" } })]);
+      const above = grid.get(x, y + 1, z);
+      if (!(above && parseState(above).name === n && parseState(above).props.half === "upper")) {
+        if (above !== undefined && grid.getId(x, y + 1, z) !== 0) warnings.add(`${n} at [${x},${y},${z}]: replaced ${above} above it with the door's upper half`);
+        adds.push([x, y + 1, z, formatState({ name: n, props: { ...st.props, half: "upper" } })]);
+      }
     } else if (n.endsWith("_bed") && !("part" in st.props)) {
       const f = st.props.facing ?? "south";
       const v: Record<string, [number, number]> = { north: [0, -1], south: [0, 1], east: [1, 0], west: [-1, 0] };
@@ -461,7 +465,6 @@ export function finalize(grid: VoxelGrid, warnings: Set<string>, context?: (x: n
     if (id !== undefined) return id === 0 ? undefined : PALETTE.get(id);
     return context?.(x, y, z);
   });
-  void warnings;
 }
 
 const DOUBLE_PLANTS = new Set(["tall_grass", "large_fern", "sunflower", "lilac", "rose_bush", "peony", "tall_seagrass", "pitcher_plant"]);

@@ -96,8 +96,8 @@ export function analyzeInterior(grid: VoxelGrid, box: Bounds, entry?: number[]):
   const lv = (p: number[]) => light.get(key(p[0], p[1], p[2])) ?? 0;
   const dark = walk.filter((p) => lv(p) < 8);
   const black = walk.filter((p) => lv(p) === 0);
-  let low = 0;
-  for (const [x, y, z] of walk) if (blocksMove(x, y + 2, z)) low++;
+  const lowCells = walk.filter(([x, y, z]) => blocksMove(x, y + 2, z));
+  const low = lowCells.length;
 
   // reachability
   let start = entry as number[] | undefined;
@@ -129,7 +129,7 @@ export function analyzeInterior(grid: VoxelGrid, box: Bounds, entry?: number[]):
         }
     }
     const unreachable = walk.filter((p) => !seen.has(key(p[0], p[1], p[2])));
-    reach = `${seen.size}/${walk.length} walkable cells reachable from [${start}]` + (unreachable.length ? `; unreachable e.g. ${unreachable.slice(0, 6).map((p) => `[${p}]`).join(" ")}` : " (all)");
+    reach = `${walk.length - unreachable.length}/${walk.length} walkable cells reachable from [${start}]` + (unreachable.length ? `; unreachable e.g. ${unreachable.slice(0, 6).map((p) => `[${p}]`).join(" ")}` : " (all)");
   }
 
   // furniture / clutter inside the box
@@ -142,7 +142,7 @@ export function analyzeInterior(grid: VoxelGrid, box: Bounds, entry?: number[]):
     `Interior check for ${dims(box)}:`,
     `- walkable floor cells: ${walk.length} (${cols} columns); light sources within 15 blocks: ${sources}`,
     `- light: ${walk.length - dark.length}/${walk.length} cells at block light >= 8; dark (<8): ${dark.length}${dark.length ? ` e.g. ${dark.slice(0, 8).map((p) => `[${p}]`).join(" ")}` : ""}; pitch black: ${black.length}`,
-    `- headroom: ${low} walkable cells have < 3 blocks clear above`,
+    `- headroom: ${low} walkable cells have < 3 blocks clear above${low ? ` e.g. ${lowCells.slice(0, 8).map((p) => `[${p}]`).join(" ")}` : ""}`,
     `- reachability: ${reach}`,
     `- furniture/clutter blocks inside: ${furn} = ${(furn / Math.max(1, cols)).toFixed(2)} per floor column (lived-in rooms ~0.6-1.5; < 0.3 feels empty)`,
   ].join("\n");

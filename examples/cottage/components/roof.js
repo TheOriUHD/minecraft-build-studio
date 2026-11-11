@@ -4,7 +4,7 @@ const pitch = [1, 1, 1, 2, 2, 2, 2];
 b.roof({ parts: [
     {a:[0,-1], b:[W-1,D], type:"gable", axis:"x"},
     {a:[4,D], b:[10,D+3], type:"gable", axis:"z"},
-  ], y:10, material:"spruce", pitch, overhang:1, gable:"$plaster" });
+  ], y:10, material:"spruce", pitch, overhang:1, gable:"$plaster", trim:"dark_oak", ridgeTrim:"stone_brick", texture:{material:"dark_oak", amount:0.15} });
 // eave trim: dark oak slabs tucked under the lowest roof course
 for (let x = -1; x <= W; x++) { b.set([x,9,-2], "dark_oak_slab[type=top]", {mask:"empty"}); b.set([x,9,D+1], "dark_oak_slab[type=top]", {mask:"empty"}); }
 // timber pattern on the main gable triangles
