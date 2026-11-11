@@ -60,7 +60,12 @@ if (!jdkDir) {
   const file = path.join(RT, "dl", pkg.name);
   await download(pkg.link, file);
   log("extracting JDK");
-  run("tar", ["-xf", file, "-C", RT]);
+  if (isWin) {
+    // GNU tar from Git Bash can't handle "C:\" paths; use Windows' bsdtar, else PowerShell
+    const sysTar = path.join(process.env.SystemRoot ?? "C:\\Windows", "System32", "tar.exe");
+    if (fs.existsSync(sysTar)) run(sysTar, ["-xf", file, "-C", RT]);
+    else run("powershell", ["-NoProfile", "-Command", `Expand-Archive -Force -LiteralPath '${file}' -DestinationPath '${RT}'`]);
+  } else run("tar", ["-xf", file, "-C", RT]);
   jdkDir = fs.readdirSync(RT).find((d) => d.startsWith("jdk"));
 }
 let jdkHome = path.join(RT, jdkDir);
