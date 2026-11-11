@@ -200,6 +200,7 @@ export class Project {
     const logs: string[] = [];
     const warnings = new Set<string>();
     const anchors: Record<string, Vec> = {};
+    const shared: Record<string, any> = {}; // objects later components can reuse (e.g. shared.hm = heightmap)
     const schemCache = new Map<string, VoxelGrid>();
     const schematics = (name: string) => {
       let g = schemCache.get(name);
@@ -214,7 +215,7 @@ export class Project {
     const baseCtx = {
       Math, JSON, console: { log: (...a: any[]) => logs.push(a.map(String).join(" ")) },
       log: (...a: any[]) => logs.push(a.map(String).join(" ")),
-      hash: hash3, noise: noise3, terrain, lib, palette: m.palette, anchors,
+      hash: hash3, noise: noise3, terrain, lib, palette: m.palette, anchors, shared,
     };
     // project lib
     const libDir = this.p("lib");

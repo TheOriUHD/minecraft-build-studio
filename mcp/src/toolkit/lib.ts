@@ -3,6 +3,8 @@
 import { Builder, family } from "./builder.ts";
 import { BlockSpec, Vec, hash3, mulberry32 } from "./patterns.ts";
 import { furnish, furniture, STYLES } from "./interior.ts";
+import { HeightMap, TERRAIN_PALETTES, scatter, scatterPoints, rock } from "./terrain.ts";
+import { plaza, spawnPad, fountain, portal, bridge, statue, wall } from "./lobby.ts";
 
 type F = Builder;
 
@@ -20,6 +22,14 @@ export function makeLib(terrain: Terrain) {
       Object.entries(furniture).map(([k, fn]) => [k, (...args: any[]) => (fn as any)(...args.map((a) => (typeof a === "string" && (STYLES as any)[a] ? (STYLES as any)[a] : a)))]),
     ) as typeof furniture,
     styles: STYLES,
+    // landscapes
+    heightmap: (x0: number, z0: number, w: number, d: number, base = 0) => new HeightMap(x0, z0, w, d, base),
+    terrainPalettes: TERRAIN_PALETTES,
+    scatter: (b: Builder, hm: HeightMap, a: [number, number], c: [number, number], o: any) => scatter(b, lib, hm, a, c, o),
+    scatterPoints,
+    rock,
+    // map / lobby pieces
+    plaza, spawnPad, fountain, portal, bridge, statue, wall,
 
     /**
      * Window in a facade frame. Carves w×h at (x, y) through the wall (depth `wall` blocks inward),

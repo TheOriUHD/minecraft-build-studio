@@ -167,7 +167,9 @@ async function doRender(p: Project, a: { frame?: string[]; views?: string[]; com
   const W = a.width ?? (per ? 768 : 1024), H = a.height ?? (per ? 576 : 768);
   const terr = p.terrain();
   const groundY = terr.height(Math.round((focus.min[0] + focus.max[0]) / 2), Math.round((focus.min[2] + focus.max[2]) / 2)) + 1;
-  const out = await renderGrid(grid, context, views, { front: m.front ?? "south", width: W, height: H, sheet: per ? (views.length <= 4 ? 2 : 3) : undefined, focus, groundY, ground: a.source === "world" ? "backdrop" : true });
+  // void worlds (nothing below the build): no fake ground plane
+  const isVoid = groundY < focus.min[1] - 40;
+  const out = await renderGrid(grid, context, views, { front: m.front ?? "south", width: W, height: H, sheet: per ? (views.length <= 4 ? 2 : 3) : undefined, focus, groundY: isVoid ? focus.min[1] : groundY, ground: isVoid ? false : a.source === "world" ? "backdrop" : true });
   const stamp = new Date().toISOString().replace(/[:.]/g, "-");
   const saved: string[] = [];
   out.images.forEach((img, i) => {
@@ -191,11 +193,11 @@ server.registerTool(
   "toolkit_reference",
   {
     title: "Toolkit reference",
-    description: "Documentation for building: 'workflow' (staged process & team roles), 'api' (builder toolkit for component scripts), 'lib' (built-in detail library), 'craft' (architecture & Minecraft building craft: proportions, depth, palettes, roofs, landscaping), 'views' (render cameras). Read workflow+api before your first build.",
-    inputSchema: { topic: z.enum(["workflow", "api", "lib", "craft", "views", "all"]).default("workflow") },
+    description: "Documentation for building: 'workflow' (staged process & team roles), 'api' (builder toolkit for component scripts), 'lib' (built-in detail library), 'craft' (architecture & Minecraft building craft: proportions, depth, palettes, roofs, landscaping), 'maps' (large maps, lobbies, minigame maps, terrain sculpting, vegetation scatter, symmetry), 'views' (render cameras). Read workflow+api before your first build.",
+    inputSchema: { topic: z.enum(["workflow", "api", "lib", "craft", "maps", "views", "all"]).default("workflow") },
   },
   wrap(async ({ topic }: { topic: string }) => {
-    const map: Record<string, string> = { workflow: "workflow.md", api: "api.md", lib: "lib.md", craft: "craft.md" };
+    const map: Record<string, string> = { workflow: "workflow.md", api: "api.md", lib: "lib.md", craft: "craft.md", maps: "maps.md" };
     if (topic === "views") return text(VIEW_HELP);
     if (topic === "all") return text(Object.values(map).map(doc).join("\n\n---\n\n") + "\n\n" + VIEW_HELP);
     return text(doc(map[topic]));
@@ -255,6 +257,7 @@ server.registerTool(
       palette: z.record(z.string(), z.any()).optional().describe("named materials, e.g. {wall:'stone_bricks', roof:'dark_oak', trim:'spruce_log'} or weighted mixes [['stone_bricks',5],['cracked_stone_bricks',1]]"),
       seed: z.number().optional(),
       template: z.string().optional().describe("copy components/lib/palette from examples/<template> (e.g. 'cottage') as a starting point"),
+      world_type: z.enum(["flat", "void", "normal"]).optional().describe("create the world if it doesn't exist: void (empty sky — best for whole maps/lobbies/islands), flat or normal"),
     },
   },
   wrap(async (a: any) => {
@@ -262,7 +265,7 @@ server.registerTool(
     const tdir = a.template ? path.resolve(import.meta.dirname, "../../examples", path.basename(a.template)) : null;
     if (tdir && !fs.existsSync(tdir)) throw new Error(`no example '${a.template}' (have: ${fs.readdirSync(path.resolve(import.meta.dirname, "../../examples")).join(", ")})`);
     const tmeta = tdir ? JSON.parse(fs.readFileSync(path.join(tdir, "project.json"), "utf8")) : null;
-    if (!origin) {
+    if (!origin && !a.world_type) {
       world = world ?? "build_flat";
       const used = Project.list().map((n) => new Project(n).meta()).filter((m) => m.world === world).length;
       const slot = used;
@@ -270,6 +273,8 @@ server.registerTool(
       if (await bridge.available()) await bridge.call("/world", { name: world, type: "flat" });
     }
     world = world ?? "world";
+    if (a.world_type && (await bridge.available())) await bridge.call("/world", { name: world, type: a.world_type });
+    if (!origin) origin = [0, a.world_type === "void" ? 64 : 0, 0];
     const size = a.site_size ?? [48, 48];
     const m: ProjectMeta = {
       name: a.name, world, origin, rotation: 0, front: a.front, style: a.style, seed: a.seed ?? Math.floor(Math.random() * 1e6),
@@ -960,7 +965,7 @@ for (const [id, r] of Object.entries(ROLES)) {
     }),
   );
 }
-for (const f of ["workflow.md", "api.md", "lib.md", "craft.md"]) {
+for (const f of ["workflow.md", "api.md", "lib.md", "craft.md", "maps.md"]) {
   server.registerResource(f, `buildstudio://docs/${f}`, { title: f, mimeType: "text/markdown" }, async (uri) => ({ contents: [{ uri: uri.href, text: doc(f) }] }));
 }
 

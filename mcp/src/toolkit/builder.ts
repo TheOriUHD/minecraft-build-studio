@@ -69,6 +69,42 @@ export class Builder {
   }
 
   /**
+   * Rotational symmetry: run fn n times (n = 2 or 4), each time rotated by 360/n degrees around (cx, cz).
+   * Use .5 centres for even-sized layouts. Block states rotate along. fn gets (frame, index).
+   */
+  radial(n: 2 | 4, cx: number, cz: number, fn: (b: Builder, i: number) => void) {
+    if (n !== 2 && n !== 4) throw new Error("radial supports n = 2 or 4 (block grids only rotate in 90° steps); use polar() for other counts");
+    if (!Number.isInteger(2 * cx) || !Number.isInteger(2 * cz)) throw new Error("radial centre must be integer or .5");
+    for (let i = 0; i < n; i++) {
+      const q = n === 2 ? i * 2 : i;
+      const [rx, , rz] = rotVec(-cx, 0, -cz, { rot: q, mirrorX: false, mirrorZ: false });
+      fn(this.at([cx + rx, 0, cz + rz], { rotate: q }), i);
+    }
+  }
+
+  /** Mirror symmetry on both axes (4 copies) around (cx, cz). fn gets (frame, quadrant 0..3). */
+  mirror4(cx: number, cz: number, fn: (b: Builder, q: number) => void) {
+    let q = 0;
+    this.symmetric("x", cx, (bx) => bx.symmetric("z", cz, (bz) => fn(bz, q++)));
+  }
+
+  /**
+   * Place n frames evenly on a circle (any n). Each frame's origin is on the circle and it is turned (to the nearest
+   * 90°) so that local +z points OUTWARD — design the item as if it stands at the origin facing south.
+   * fn gets (frame, index, angleRadians).
+   */
+  polar(center: Vec, radius: number, n: number, fn: (b: Builder, i: number, angle: number) => void, startAngle = 0) {
+    for (let i = 0; i < n; i++) {
+      const a = startAngle + (i / n) * Math.PI * 2;
+      const x = Math.round(center[0] + Math.sin(a) * radius), z = Math.round(center[2] + Math.cos(a) * radius);
+      // outward direction (sin a, cos a); rotation that maps +z (south) to it
+      const deg = ((Math.atan2(-Math.sin(a), Math.cos(a)) * 180) / Math.PI + 360) % 360; // clockwise from south
+      const q = Math.round(deg / 90) % 4;
+      fn(this.at([x, center[1], z], { rotate: q }), i, a);
+    }
+  }
+
+  /**
    * Run fn for each of the four vertical faces of the box a..b, in a facade frame:
    * local x runs left→right along the wall as seen from OUTSIDE, y up from a.y, z points OUTWARD
    * (z=0 is the wall plane, z<0 is inside). Stairs with facing=south face outward.

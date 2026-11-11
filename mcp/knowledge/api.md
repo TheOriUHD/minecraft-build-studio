@@ -11,6 +11,7 @@ A component is a plain JavaScript file (no imports) that runs top-to-bottom. Glo
 | `rng` | seeded RNG: `rng()` 0..1, `rng.int(lo,hi)`, `rng.pick(arr)`, `rng.chance(p)` — deterministic per project+component |
 | `terrain` | `terrain.height(x,z)` → local y of the top solid block (build at height+1); `terrain.surface(x,z)` → block id |
 | `anchors` | named points published by earlier components: `anchors["main.door"]` → [x,y,z] |
+| `shared` | object shared by all components of one compile (e.g. `shared.hm = heightmap` in `terrain`, reuse it later) |
 | `hash(x,y,z,seed)` / `noise(x,y,z,scale,seed)` | position hash (0..1) / smooth value noise for clustered variation |
 | `log(...)` | message shown in the tool result |
 
@@ -34,6 +35,9 @@ Every builder has an origin and orientation. Child frames:
   In a facade frame: **x runs left→right along the wall as seen from outside (0..width-1), y up from a.y, z points OUTWARD** (z=0 is the wall plane, z<0 inside, z=1 proud of the wall). `facing=south` = faces outward; `facing=north` = faces into the building.
 - `b.symmetric("x", centerX, (f, side) => {...})` – draw once, mirrored copy across x=centerX (use .5 for even widths).
 - `b.repeat(n, [dx,dy,dz], (f, i) => {...})` – arrays of bays, columns, windows.
+- `b.mirror4(cx, cz, (f, q) => …)` – 4-way mirror symmetry; `b.radial(2|4, cx, cz, (f, i) => …)` – rotational symmetry (team maps, plazas);
+  `b.polar([x,y,z], r, n, (f, i, angle) => …)` – n items on a circle, each frame turned so +z points outward.
+- Large maps / terrain / lobby pieces: see toolkit_reference topic **maps**.
 
 Design a bay/window/tower once as a function `(f, opts) => {...}` and place it with frames.
 
