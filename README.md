@@ -54,13 +54,13 @@ The agent never places blocks blindly. It works like a studio:
 
 ```mermaid
 flowchart LR
-    A[Brief &amp; plan] --> B[Write component scripts<br/><sub>walls · roof · interior · terrain…</sub>]
-    B --> C[Compile to voxels<br/><sub>auto-connect fences, stairs, doors</sub>]
-    C --> D[Render &amp; inspect<br/><sub>elevations · 3/4 · eye-level · cutaways</sub>]
-    D --> E{Critique<br/><sub>concrete, located</sub>}
+    A["Brief and map plan"] --> B["Write component scripts<br/>walls, roof, interior, terrain"]
+    B --> C["Compile to voxels<br/>auto-connect fences, stairs, doors"]
+    C --> D["Render and inspect<br/>elevations, 3/4, eye level, cutaways"]
+    D --> E{"Critique<br/>concrete and located"}
     E -- fix --> B
-    E -- good --> F[Apply to world<br/><sub>diff + undo</sub>]
-    F --> G[.schem export]
+    E -- good --> F["Apply to world<br/>diff + undo"]
+    F --> G[".schem export"]
 ```
 
 - **Builds are code.** Every project is a folder of small JavaScript components (`foundation`, `walls`, `roof`, `interior`, `terrain`, `vegetation`…) written against a builder toolkit with frames, facades, symmetry, roofs, terrain and furniture. A change like *"make the roof steeper"* is a one-line edit followed by a re-render.
