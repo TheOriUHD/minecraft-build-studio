@@ -1,0 +1,1 @@
+A medieval timber-framed cottage for 2-3 villagers: two storeys, stone ground floor, timber-framed white upper floor that jetties out 1 block, steep dark roof with a cross gable over the entrance, chimney, small garden with path and a tree. Footprint about 15x11.

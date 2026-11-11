@@ -1,0 +1,213 @@
+<!doctype html>
+<html>
+<head>
+<meta charset="utf-8">
+<style>html,body{margin:0;background:#000}canvas{display:block}</style>
+<script type="importmap">{"imports":{"three":"/three/three.module.js"}}</script>
+</head>
+<body>
+<script type="module">
+import * as THREE from "three";
+
+let renderer, scene, atlasTex, meshes = [], groundGroup;
+const loader = new THREE.TextureLoader();
+
+async function loadScene(id) {
+  const [buf, meta] = await Promise.all([
+    fetch(`/mesh/${id}.bin`).then(r => r.arrayBuffer()),
+    fetch(`/mesh/${id}.json`).then(r => r.json()),
+  ]);
+  if (atlasTex) atlasTex.dispose();
+  atlasTex = await loader.loadAsync(`/mesh/${id}.png`);
+  atlasTex.magFilter = THREE.NearestFilter;
+  atlasTex.minFilter = THREE.NearestFilter;
+  atlasTex.generateMipmaps = false;
+  atlasTex.colorSpace = THREE.SRGBColorSpace;
+
+  if (!renderer) {
+    renderer = new THREE.WebGLRenderer({ antialias: true, preserveDrawingBuffer: true });
+    renderer.shadowMap.enabled = true;
+    renderer.shadowMap.type = THREE.PCFSoftShadowMap;
+    renderer.localClippingEnabled = true;
+    document.body.appendChild(renderer.domElement);
+  }
+  scene = new THREE.Scene();
+  for (const m of meshes) { m.geometry.dispose(); m.material.dispose(); }
+  meshes = [];
+  const header = new Uint32Array(buf, 0, 12);
+  let off = 48;
+  const kinds = ["opaque", "cutout", "translucent"];
+  for (let k = 0; k < 3; k++) {
+    const nPos = header[k * 4], nUv = header[k * 4 + 1], nCol = header[k * 4 + 2], nIdx = header[k * 4 + 3];
+    const pos = new Float32Array(buf, off, nPos); off += nPos * 4;
+    const uv = new Float32Array(buf, off, nUv); off += nUv * 4;
+    const col = new Float32Array(buf, off, nCol); off += nCol * 4;
+    const idx = new Uint32Array(buf, off, nIdx); off += nIdx * 4;
+    if (!nIdx) continue;
+    const g = new THREE.BufferGeometry();
+    g.setAttribute("position", new THREE.BufferAttribute(pos, 3));
+    g.setAttribute("uv", new THREE.BufferAttribute(uv, 2));
+    g.setAttribute("color", new THREE.BufferAttribute(col, 3));
+    g.setIndex(new THREE.BufferAttribute(idx, 1));
+    g.computeVertexNormals();
+    const mat = new THREE.MeshLambertMaterial({
+      map: atlasTex, vertexColors: true, side: kinds[k] === "opaque" ? THREE.FrontSide : THREE.DoubleSide,
+      alphaTest: kinds[k] === "cutout" ? 0.5 : 0, transparent: kinds[k] === "translucent", depthWrite: kinds[k] !== "translucent",
+    });
+    const mesh = new THREE.Mesh(g, mat);
+    mesh.castShadow = kinds[k] !== "translucent";
+    mesh.receiveShadow = true;
+    if (kinds[k] === "translucent") mesh.renderOrder = 2;
+    scene.add(mesh);
+    meshes.push(mesh);
+  }
+  const b = meta.bounds;
+  const c = [(b.min[0] + b.max[0] + 1) / 2, (b.min[1] + b.max[1] + 1) / 2, (b.min[2] + b.max[2] + 1) / 2];
+  const r = Math.max(b.max[0] - b.min[0], b.max[1] - b.min[1], b.max[2] - b.min[2]) + 2;
+  scene.add(new THREE.HemisphereLight(0xdfeeff, 0x8a7a60, 1.25));
+  const sun = new THREE.DirectionalLight(0xfff4e0, 1.9);
+  sun.position.set(c[0] + r * 0.6, c[1] + r * 1.2, c[2] + r * 0.9);
+  sun.target.position.set(c[0], c[1], c[2]);
+  sun.castShadow = true;
+  sun.shadow.mapSize.set(4096, 4096);
+  const sc = sun.shadow.camera;
+  sc.left = -r * 1.2; sc.right = r * 1.2; sc.top = r * 1.2; sc.bottom = -r * 1.2; sc.near = 0.1; sc.far = r * 4;
+  sun.shadow.bias = -0.0004;
+  sun.shadow.normalBias = 0.02;
+  scene.add(sun, sun.target);
+
+  if (meta.ground) {
+    // measuring ground: 1-block grid, darker every 5, axis lines through 0
+    const gsize = meta.ground.grid ? Math.ceil(r * 3 / 10) * 10 : 2000;
+    const gx = Math.floor(c[0] / 5) * 5, gz = Math.floor(c[2] / 5) * 5;
+    const y = meta.ground.y;
+    const plane = new THREE.Mesh(new THREE.PlaneGeometry(gsize * 2, gsize * 2), new THREE.MeshLambertMaterial({ color: 0x7c9a5a }));
+    plane.rotation.x = -Math.PI / 2; plane.position.set(gx, y - 0.001, gz); plane.receiveShadow = true;
+    scene.add(plane);
+    const lines = (step, color, opacity) => {
+      const pts = [];
+      for (let i = -gsize; i <= gsize; i += step) {
+        pts.push(gx + i, y, gz - gsize, gx + i, y, gz + gsize);
+        pts.push(gx - gsize, y, gz + i, gx + gsize, y, gz + i);
+      }
+      const geo = new THREE.BufferGeometry();
+      geo.setAttribute("position", new THREE.Float32BufferAttribute(pts, 3));
+      const l = new THREE.LineSegments(geo, new THREE.LineBasicMaterial({ color, transparent: true, opacity }));
+      scene.add(l);
+    };
+    if (meta.ground.grid) {
+      lines(1, 0x2c3a20, 0.18);
+      lines(5, 0x1b2612, 0.45);
+    }
+  }
+  scene.background = new THREE.Color(0xa9cdf5);
+  if (meta.ground && !meta.ground.grid) scene.fog = new THREE.Fog(0xa9cdf5, r * 7, r * 25);
+  return { ok: true, tris: meshes.reduce((s, m) => s + m.geometry.index.count / 3, 0) };
+}
+
+function renderView(v) {
+  renderer.setSize(v.width, v.height, false);
+  let cam;
+  if (v.kind === "ortho") {
+    const hh = v.halfHeight, hw = hh * v.width / v.height;
+    cam = new THREE.OrthographicCamera(-hw, hw, hh, -hh, 0.1, 5000);
+  } else {
+    cam = new THREE.PerspectiveCamera(v.fov ?? 40, v.width / v.height, 0.1, 5000);
+  }
+  cam.position.set(...v.eye);
+  cam.up.set(...(v.up ?? [0, 1, 0]));
+  cam.lookAt(...v.target);
+  cam.updateMatrixWorld();
+  cam.updateProjectionMatrix();
+  const planes = (v.clip ?? []).map(p => new THREE.Plane(new THREE.Vector3(...p.normal), p.constant));
+  for (const m of meshes) { m.material.clippingPlanes = planes; m.material.needsUpdate = true; }
+  renderer.render(scene, cam);
+  // compose overlay
+  const out = document.createElement("canvas");
+  out.width = v.width; out.height = v.height;
+  const g = out.getContext("2d");
+  g.drawImage(renderer.domElement, 0, 0);
+  drawOverlay(g, cam, v);
+  return out;
+}
+
+function proj(cam, p, v) {
+  const q = new THREE.Vector3(...p).project(cam);
+  return [(q.x + 1) / 2 * v.width, (1 - q.y) / 2 * v.height];
+}
+
+function drawOverlay(g, cam, v) {
+  g.font = "bold 13px sans-serif";
+  g.textBaseline = "top";
+  const label = (txt, x, y, bg = "rgba(0,0,0,0.6)") => {
+    const w = g.measureText(txt).width + 8;
+    g.fillStyle = bg; g.fillRect(x, y, w, 18);
+    g.fillStyle = "#fff"; g.fillText(txt, x + 4, y + 3);
+  };
+  label(v.title, 6, 6);
+  if (v.rulers) {
+    // rulers along bottom (u axis) and left (v axis). rulers: {u:{axis, from, to, fixed:[...]}, v:{...}}
+    g.font = "11px sans-serif";
+    const drawAxis = (ax, isBottom) => {
+      const step = (ax.to - ax.from) > 60 ? 10 : 5;
+      for (let t = Math.ceil(ax.from); t <= ax.to; t++) {
+        const p = ax.point(t);
+        const [sx, sy] = proj(cam, p, v);
+        const major = t % step === 0;
+        g.strokeStyle = major ? "rgba(255,255,255,0.95)" : "rgba(255,255,255,0.55)";
+        g.lineWidth = 1;
+        g.beginPath();
+        if (isBottom) { g.moveTo(sx, v.height); g.lineTo(sx, v.height - (major ? 12 : 5)); }
+        else { g.moveTo(0, sy); g.lineTo(major ? 12 : 5, sy); }
+        g.stroke();
+        if (major) {
+          const txt = String(t);
+          g.fillStyle = "rgba(0,0,0,0.65)";
+          if (isBottom) { const w = g.measureText(txt).width + 4; g.fillRect(sx - w / 2, v.height - 28, w, 14); g.fillStyle = "#fff"; g.fillText(txt, sx - w / 2 + 2, v.height - 27); }
+          else { const w = g.measureText(txt).width + 4; g.fillRect(14, sy - 7, w, 14); g.fillStyle = "#fff"; g.fillText(txt, 16, sy - 6); }
+        }
+      }
+      g.font = "bold 12px sans-serif";
+      if (isBottom) label(ax.name + " →", v.width - 60, v.height - 48);
+      else label(ax.name + " ↑", 6, 30);
+      g.font = "11px sans-serif";
+    };
+    const mk = (r) => ({ ...r, point: (t) => { const p = [...r.fixed]; p[r.axisIndex] = t + 0.5; return p; } });
+    drawAxis(mk(v.rulers.u), true);
+    drawAxis(mk(v.rulers.v), false);
+  }
+  if (v.compass) {
+    // little compass showing world directions as projected on screen
+    const c = proj(cam, v.target, v);
+    const dirs = { N: [0, 0, -1], E: [1, 0, 0], S: [0, 0, 1], W: [-1, 0, 0] };
+    const cx = v.width - 50, cy = 50;
+    g.fillStyle = "rgba(0,0,0,0.45)"; g.beginPath(); g.arc(cx, cy, 38, 0, Math.PI * 2); g.fill();
+    for (const [n, d] of Object.entries(dirs)) {
+      const p2 = proj(cam, [v.target[0] + d[0] * 4, v.target[1], v.target[2] + d[2] * 4], v);
+      let dx = p2[0] - c[0], dy = p2[1] - c[1];
+      const L = Math.hypot(dx, dy) || 1; dx /= L; dy /= L;
+      g.strokeStyle = n === "N" ? "#ff6b6b" : "#fff"; g.lineWidth = 2;
+      g.beginPath(); g.moveTo(cx, cy); g.lineTo(cx + dx * 24, cy + dy * 24); g.stroke();
+      g.fillStyle = n === "N" ? "#ff6b6b" : "#fff"; g.font = "bold 12px sans-serif";
+      g.fillText(n, cx + dx * 30 - 4, cy + dy * 30 - 6);
+    }
+  }
+}
+
+window.loadScene = loadScene;
+window.renderViews = (views, sheet) => {
+  const canvases = views.map(renderView);
+  if (!sheet) return canvases.map(c => c.toDataURL("image/png"));
+  const cols = sheet.cols, rows = Math.ceil(canvases.length / cols);
+  const w = views[0].width, h = views[0].height;
+  const big = document.createElement("canvas");
+  big.width = cols * w + (cols - 1) * 4; big.height = rows * h + (rows - 1) * 4;
+  const g = big.getContext("2d");
+  g.fillStyle = "#222"; g.fillRect(0, 0, big.width, big.height);
+  canvases.forEach((c, i) => g.drawImage(c, (i % cols) * (w + 4), Math.floor(i / cols) * (h + 4)));
+  return [big.toDataURL("image/png")];
+};
+window.ready = true;
+</script>
+</body>
+</html>

@@ -1,0 +1,124 @@
+{
+  "name": "cottage",
+  "world": "build_flat",
+  "origin": [
+    0,
+    -60,
+    0
+  ],
+  "rotation": 0,
+  "front": "south",
+  "style": "medieval timber",
+  "seed": 914722,
+  "site": {
+    "min": [
+      0,
+      0
+    ],
+    "max": [
+      47,
+      47
+    ]
+  },
+  "palette": {
+    "stone": [
+      [
+        "stone_bricks",
+        6
+      ],
+      [
+        "cobblestone",
+        2
+      ],
+      [
+        "mossy_stone_bricks",
+        1
+      ],
+      [
+        "andesite",
+        1
+      ]
+    ],
+    "base": [
+      [
+        "cobblestone",
+        4
+      ],
+      [
+        "mossy_cobblestone",
+        2
+      ],
+      [
+        "stone",
+        1
+      ]
+    ],
+    "frame": "dark_oak_log",
+    "plaster": [
+      [
+        "white_terracotta",
+        5
+      ],
+      [
+        "calcite",
+        3
+      ],
+      [
+        "smooth_quartz",
+        1
+      ]
+    ],
+    "roof": "spruce",
+    "trim": "spruce"
+  },
+  "components": [
+    {
+      "name": "massing",
+      "enabled": false,
+      "status": "draft",
+      "description": "rough volumes"
+    },
+    {
+      "name": "foundation",
+      "enabled": true,
+      "status": "draft"
+    },
+    {
+      "name": "walls",
+      "enabled": true,
+      "status": "draft"
+    },
+    {
+      "name": "frame",
+      "enabled": true,
+      "status": "draft"
+    },
+    {
+      "name": "openings",
+      "enabled": true,
+      "status": "draft"
+    },
+    {
+      "name": "roof",
+      "enabled": true,
+      "status": "draft"
+    },
+    {
+      "name": "details",
+      "enabled": true,
+      "status": "draft"
+    },
+    {
+      "name": "interior",
+      "enabled": true,
+      "status": "draft",
+      "description": "rooms, stairs, furniture"
+    },
+    {
+      "name": "landscape",
+      "enabled": true,
+      "status": "draft"
+    }
+  ],
+  "created": "2026-11-11T21:58:28.438Z"
+}

@@ -1,0 +1,31 @@
+{
+  "name": "minecraft-build-mcp",
+  "version": "0.1.0",
+  "description": "",
+  "main": "src/index.ts",
+  "scripts": {
+    "start": "node src/index.ts",
+    "typecheck": "tsc --noEmit",
+    "extract-assets": "node scripts/extract-assets.ts ../runtime/dl/client.jar ../runtime/assets"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "module",
+  "dependencies": {
+    "@modelcontextprotocol/sdk": "^1.32.2",
+    "pngjs": "^7.0.0",
+    "prismarine-nbt": "^2.8.0",
+    "puppeteer-core": "^25.17.0",
+    "three": "^0.187.0",
+    "yauzl": "^3.4.0",
+    "zod": "^4.6.7"
+  },
+  "devDependencies": {
+    "@types/node": "^26.6.6",
+    "@types/pngjs": "^6.0.5",
+    "@types/yauzl": "^3.4.0",
+    "tsx": "^4.23.15",
+    "typescript": "^7.0.2"
+  }
+}

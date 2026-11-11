@@ -1,0 +1,5 @@
+name: BuildMCPBridge
+version: 0.1.0
+main: dev.buildmcp.bridge.BridgePlugin
+api-version: '1.21'
+description: Local HTTP bridge for the BuildMCP building toolkit

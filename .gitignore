@@ -1,0 +1,6 @@
+node_modules/
+runtime/
+plugin/out/
+projects/
+*.log
+.DS_Store

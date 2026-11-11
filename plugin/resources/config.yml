@@ -1,0 +1,5 @@
+# Bridge only listens on localhost by default. Set a token if other users share this machine.
+host: 127.0.0.1
+port: 8765
+token: ""
+blocks-per-tick: 60000
