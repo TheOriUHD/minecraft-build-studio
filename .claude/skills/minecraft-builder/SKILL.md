@@ -43,11 +43,18 @@ What experts do that beginners don't (from studying professional server maps —
 - horizontal layering on facades (base / main storey / attic, cornices, frieze bands), a projecting taller central element
 - many props clustered at doors/corners; custom organic trees; one dominant landmark per scene
 
+## 3b. Player checks — mandatory, every stage
+Overhead renders hide the problems players notice first. After every build stage and before you call anything done:
+1. **`qa`** — automatic checks: rooms that can't be entered (no door / blocked / step too high), glass or panes not held by a wall, blocked doors, doors missing a half or floor, torches/lanterns/signs attached to nothing, stray floating blocks. It returns coordinates + close-ups. **Fix every error** (re-run until 0 errors); read every warning and fix or consciously accept it.
+2. **`walkthrough`** — the build seen as a player: approaching from 4 sides, each door from outside and while entering, standing inside every room/floor, and a look-around from spawn (`from:[x,y,z]`). For each image ask: can I get in? does anything float, clip, block the way, look odd or unfinished? is it too dark, empty or cramped? Write the problems as located critiques and fix them.
+3. Hard rules for every building: **enterable** (a 2-high door or opening reachable on foot from the ground/island surface) unless it is clearly decorative and sealed on purpose; windows **inside wall openings** (panes connect to wall blocks on both sides, never hanging in front of or beside a wall); doors on a floor with free space on both sides; every light/sign/torch attached to a block; no stray single blocks; roofs closed (no sky visible from inside except intended openings).
+
 ## 4. Large maps: lobbies, minigame maps, landscapes
 Read toolkit_reference **maps** first. Write a map plan (boundary, spawn + first view, zones, circulation, hero landmark + secondary landmarks, palette) and post it to `notes`.
 - Component order: `terrain` (lib.heightmap → noise/island/hills/pads/rivers → build; `shared.hm = hm`) → hero building(s) on flattened pads → structured zones (spawn pad, plaza, portals, bridges) → secondary buildings → `vegetation`/`props` (lib.scatter with `avoid` for paths/plazas) → `boundary`.
 - Symmetric core, organic surroundings: spawn plaza, portal rings and team layouts use `b.symmetric` / `b.mirror4` / `b.radial` / `b.polar`; terrain, coastlines, forests and paths stay organic. Competitive maps must be fair (rotational symmetry).
-- Review with `top` (map plan), `overview`, all four `iso_*`, an `eye:` view from spawn, and `cam:` views toward each zone. Treat each zone like its own build with its own critique loop.
+- Review with `top` (map plan), `overview`, all four `iso_*`, an `eye:` view from spawn, and `cam:` views toward each zone. Treat each zone like its own build with its own critique loop — and run `qa` + `walkthrough {components:[…], from: spawn}` per zone/island.
+- Minigame maps (SkyWars, BedWars, …): read the minigame section in toolkit_reference **maps** — symmetric island sets, spawn points, chests, mid island, gaps, readability.
 - For big maps, split the work across the team: terrain/landscape, hero building, zone builders, interior designer, critic.
 
 ## 5. Interiors (do them properly)
@@ -56,7 +63,7 @@ Read toolkit_reference **maps** first. Write a map plan (boundary, spawn + first
 - Verify: `render` views `room:<air box>` (whole room from a corner), `cutaway_y=<floor+3>` (dollhouse) and `eye:x,y,z,yaw` (standing in the room), and `inspect kind:"interior"` per room → no dark cells, everything reachable from the door, density ~0.6–1.5.
 
 ## 6. Apply & verify in the world
-`apply` (writes only the diff, keeps undo checkpoints) → `render source:"world"` to verify what Minecraft actually has → `export_schematic` for a `.schem`. Use `checkpoints` to roll back. `server action:"teleport"` puts a watching player in front of the build.
+`qa` must report 0 errors first. Then `apply` (writes only the diff, keeps undo checkpoints) → `render source:"world"` to verify what Minecraft actually has → `export_schematic` for a `.schem`. Use `checkpoints` to roll back. `server action:"teleport"` puts a watching player in front of the build.
 
 ## 7. Running a team (for big builds)
 For anything larger than a house, act as **lead architect** and delegate to subagents (Claude Code: the `mc-*` agents in `.claude/agents/`; other clients: the MCP prompts `facade_detailer`, `roofer`, `interior_designer`, `landscaper`, `critic`):

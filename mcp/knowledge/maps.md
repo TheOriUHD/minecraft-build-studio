@@ -57,6 +57,7 @@ shared.hm = hm;   // later components: const hm = shared.hm (components compile 
 | `lib.bridge(b, a, c, {width, arch, lamps})` | bridges over rivers/gaps |
 | `lib.statue(b, p, {h, material, cap})` | pedestals/obelisks marking axes and portals |
 | `lib.wall(b, points, y or (x,z)=>y, {h, towers})` | map borders, city walls with towers |
+| `lib.floatingIsland(b, [x,y,z], r, {palette, seed, height, depth, flat})` | complete small floating island (organic outline, grass top, rocky taper below) in one call; returns its heightmap (`.at(x,z)`, `.isLand`) — top surface ≈ y, `flat` = radius of a flat area in the middle |
 
 Typical lobby: spawn pad in a plaza on the main axis → fountain/statue on the axis → portals arranged symmetrically around the plaza (`b.polar` or `b.radial(4)`) each with its own colour/banner theme → hero building at the end of the main axis on raised terrain → organic island terrain, forests, rivers, viewpoints around it → closed boundary (sea/cliffs/void undersides).
 
@@ -65,6 +66,14 @@ Typical lobby: spawn pad in a plaza on the main axis → fountain/statue on the 
 - Fairness: rotational symmetry for team maps; identical gameplay geometry per team, decoration can vary slightly.
 - Cover and verticality every 8–15 blocks along lanes; no unreachable decoration that blocks movement; keep playable areas flat enough to walk (slope ≤ 1 per block).
 - Spawn protection: spawns enclosed on 3 sides, facing the action.
+
+## 6b. SkyWars / island minigame maps (the classic layout)
+- **Layout**: 8 (or 4, 12) **player islands** evenly on a ring around a bigger **mid island**, generated with rotational symmetry (`b.radial(4, …)` twice offset by 45° via `b.polar`, or `b.polar(center, r, 8, …)` so every island is identical in gameplay and turned to face the middle). Ring radius 35–55, gap between neighbouring islands 15–25 blocks (bridgeable), mid island 2–4× the size of a player island, optionally 2–4 **satellite islands** between ring and mid for extra loot.
+- **Player island** (~15–25 blocks across): `lib.floatingIsland` or a small heightmap with a tapered underside; a flat **spawn point** near the outer edge facing the middle; 2–3 **chests** (one in the hut, one outside); one small themed **structure** that is **enterable** (door/opening at ground level, 2-high, no step > 1) or an open pavilion — never a sealed box; a tree or rocks for cover; some vertical variety.
+- **Mid island**: the landmark (ruin, tower, temple) with 4–8 chests reachable from all sides, symmetric approach points, cover, a high point.
+- **Theme** each map (sky villages, ruined kingdoms, ice, desert…), vary decoration per island slightly but keep geometry identical.
+- **Checks**: `qa` + `walkthrough {components:["island_…"], from: spawnPoint}` on one player island and the mid island; make sure the spawn view sees the mid island; nothing blocks spawn; no glass/blocks floating unattached; chests reachable.
+- Build ONE player island as a reusable function in `write_library` (e.g. `lib.playerIsland(b, i)`), then place it with `b.polar` — fixes then apply to all islands at once.
 
 ## 7. Seeing big maps
 - `render` views `top` (whole map plan with rulers), `overview`, `iso_ne/nw/se/sw`, plus `cam:` cameras from the spawn point toward each zone and `eye:` at spawn (what players see first).

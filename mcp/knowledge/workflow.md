@@ -14,6 +14,9 @@ Tools: create_project → write_component / edit_component → render / inspect 
 
 Revision budget: max ~3 review loops per stage. If after 2 loops the silhouette still looks wrong, go back to massing instead of decorating.
 
+## Player checks (every stage)
+`qa` (fix all errors) and `walkthrough` (look at every view as a player) after each stage. Buildings must be enterable, windows sit in wall openings, nothing floats unattached. See SKILL §3b.
+
 ## Critique format
 After each render write a short numbered list:
 `1. [roof] east gable overhang missing — gableOverhang:1 in roof component`

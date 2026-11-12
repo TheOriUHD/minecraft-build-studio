@@ -12,6 +12,7 @@ import { renderGrid, renderService, VIEW_HELP } from "./render/renderer.ts";
 import { VoxelGrid, key, unkey, Bounds } from "./voxel.ts";
 import { stats, slice, dims } from "./inspect.ts";
 import { analyzeInterior } from "./interiorcheck.ts";
+import { runQA, walkthroughViews, formatFindings } from "./qa.ts";
 import { listDimensions, loadBlocks, chunkDensity } from "./worldreader.ts";
 const dims_ = dims;
 const NL = String.fromCharCode(10);
@@ -665,6 +666,97 @@ server.registerTool(
           if (s !== undefined) out.push(`[${x},${y},${z}] ${s}`);
         }
     return text(out.join("\n") || "(no blocks set in this box)");
+  }),
+);
+
+// =====================================================================
+// Quality assurance: automatic checks + player-perspective walkthrough
+// =====================================================================
+
+/** World terrain under the project (from survey_site); void worlds have none. */
+function qaGround(p: Project) {
+  const t = p.terrain();
+  return (x: number, z: number) => {
+    const h = t.height(x, z);
+    return h < -100 ? null : h;
+  };
+}
+
+function qaSetup(p: Project, a: { components?: string[]; margin?: number; region?: { min: number[]; max: number[] } }) {
+  const r = p.compile();
+  const names = a.components?.length ? a.components : [...r.perComponent.keys()].filter((n) => !TERRAINISH.test(n));
+  const focusGrid = new VoxelGrid();
+  for (const n of names) {
+    const g = r.perComponent.get(n);
+    if (!g) throw new Error(`no component '${n}' (have: ${[...r.perComponent.keys()].join(", ")})`);
+    for (const [k, v] of g.cells) if (v !== 0) focusGrid.cells.set(k, v);
+  }
+  let fb = focusGrid.bounds() ?? r.grid.bounds();
+  if (!fb) throw new Error("nothing to check");
+  if (a.region) fb = { min: a.region.min as any, max: a.region.max as any };
+  const m = a.margin ?? 6;
+  const box: Bounds = { min: [fb.min[0] - m, fb.min[1] - 3, fb.min[2] - m], max: [fb.max[0] + m, fb.max[1] + 3, fb.max[2] + m] };
+  return { r, names, focusGrid, focus: fb, box };
+}
+
+server.registerTool(
+  "qa",
+  {
+    title: "Quality check (build lint)",
+    description: `Automatic checks a player would notice: roofed areas you can't walk into (no door / blocked / step too high), sealed rooms, glass or panes not held by a wall, blocked doors or doors without an upper half/floor, torches/lanterns/signs attached to nothing, stray floating blocks. Checks the building components (terrain-like components are context only) or the ones you pass. Returns coordinates with a 'detail:' view for each; look=true also renders close-ups of the first problems. Run it after every build stage and fix all errors before calling a build done.`,
+    inputSchema: {
+      project: z.string(),
+      components: z.array(z.string()).optional().describe("components to check (default: all non-terrain components)"),
+      region: z.object({ min: z.array(z.number()).length(3), max: z.array(z.number()).length(3) }).optional(),
+      look: z.boolean().default(true).describe("render close-ups of the first problems"),
+    },
+  },
+  wrap(async (a: any) => {
+    const p = proj(a.project);
+    const { r, focusGrid, box } = qaSetup(p, a);
+    const res = runQA(r.grid, box, focusGrid, qaGround(p));
+    const txt = formatFindings(res);
+    const bad = res.findings.filter((f) => f.severity !== "info").slice(0, 6);
+    if (!a.look || !bad.length) return text(txt);
+    const views = bad.map((f) => `detail:${f.pos.join(",")},4`);
+    const out = await renderGrid(r.grid, null, views, { width: 640, height: 420, sheet: views.length > 1 ? 3 : undefined, focus: box, ground: false });
+    return { content: [...out.images.map((img) => ({ type: "image" as const, data: img.toString("base64"), mimeType: "image/png" })), { type: "text" as const, text: `${txt}\nClose-ups (in order): ${bad.map((f, i) => `${i + 1}. ${f.kind} [${f.pos}]`).join(" | ")}` }] };
+  }),
+);
+
+server.registerTool(
+  "walkthrough",
+  {
+    title: "Player-perspective walkthrough",
+    description: `See the build as a player does: auto-placed eye-level views approaching from all four sides, at each door from outside and when entering, inside each room (corner view), and optionally a 360° look-around from a spot (e.g. spawn: from=[x,y,z] = the block the player stands in). Use it to judge what looks odd, what is in the way, what can't be reached and how spaces feel — overhead renders hide these problems. Returns a contact sheet plus the camera list (re-render any of them bigger with render views:[...]).`,
+    inputSchema: {
+      project: z.string(),
+      components: z.array(z.string()).optional().describe("which buildings to walk around (default: all non-terrain components)"),
+      from: z.array(z.number()).length(3).optional().describe("look around from this standing position (4 directions)"),
+      max: z.number().default(12),
+    },
+  },
+  wrap(async (a: any) => {
+    const p = proj(a.project);
+    const { r, focusGrid, focus, box } = qaSetup(p, a);
+    const res = runQA(r.grid, box, focusGrid, qaGround(p));
+    const { views, labels } = walkthroughViews(r.grid, focus, res, { from: a.from, max: a.max, groundAt: qaGround(p) });
+    const m = p.meta();
+    let context: VoxelGrid | null = null;
+    try {
+      context = await worldContext(p, focus);
+    } catch {}
+    const out = await renderGrid(r.grid, context, views, { front: m.front ?? "south", width: 640, height: 420, sheet: 3, focus, ground: context ? true : false });
+    const stamp = new Date().toISOString().replace(/[:.]/g, "-");
+    const f = p.p("reviews", `${stamp}_walkthrough.png`);
+    fs.writeFileSync(f, out.images[0]);
+    const e = res.findings.filter((x) => x.severity === "error").length;
+    return {
+      content: [
+        { type: "image", data: out.images[0].toString("base64"), mimeType: "image/png" },
+        { type: "text", text: `Walkthrough (left→right, top→bottom):\n${labels.map((l, i) => `${i + 1}. ${l}  [${views[i]}]`).join("\n")}\nQA errors right now: ${e}${e ? " — run qa for details" : ""}.\nJudge each view like a player: can I get in? Does anything look odd, floating, blocked, too dark, too empty or cramped? Then fix and walk through again.\nSaved: ${path.relative(PROJECTS_DIR, f)}` },
+      ],
+    };
   }),
 );
 

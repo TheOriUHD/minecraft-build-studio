@@ -237,6 +237,7 @@ export class HeightMap {
     solid?: boolean;
     floating?: boolean;
     undersideDepth?: number; // floating: how far the rock hangs below (blocks at the centre)
+    taper?: number; // floating: blocks from the edge over which the underside reaches full depth (smaller = blunter)
     cliffSlope?: number; // height difference that counts as a cliff
     snowLine?: number | null;
     beach?: number; // blocks above water that become sand
@@ -284,7 +285,7 @@ export class HeightMap {
         else if (o.floating) {
           // tapered underside: deeper toward the middle, noisy
           const edge = this.edgeDistance(x, z, o.cutoff ?? -1e9);
-          const ud = (o.undersideDepth ?? 18) * Math.min(1, Math.pow(edge / 14, 0.8)) * (0.7 + 0.6 * fbm(x, z, 9, 3, 77));
+          const ud = (o.undersideDepth ?? 18) * Math.min(1, Math.pow(edge / (o.taper ?? 14), 1.15)) * (0.7 + 0.6 * fbm(x, z, 9, 3, 77));
           lowest = Math.round(top - depth - ud);
         } else lowest = Math.min(top - depth, minN - 1);
         if (!o.solid && !o.floating && water !== null) lowest = Math.min(lowest, Math.max(seaFloorMin, top - depth));
@@ -430,4 +431,19 @@ export function scatter(b: B, lib: any, hm: HeightMap, a: [number, number], c: [
     } else throw new Error(`scatter: unknown kind '${kind}'`);
   }
   return placed;
+}
+
+/**
+ * One-call small floating island: organic outline of radius r around c, top surface about c[1],
+ * flat area of radius o.flat in the middle (spawn/buildings), rocky tapered underside. Returns the heightmap.
+ */
+export function floatingIsland(b: Builder, c: Vec, r: number, o: { palette?: string | TerrainPalette; seed?: number; height?: number; depth?: number; flat?: number; relief?: number } = {}) {
+  const R = Math.ceil(r * 1.35);
+  const hm = new HeightMap(c[0] - R, c[2] - R, 2 * R + 1, 2 * R + 1, c[1]);
+  hm.noise({ amp: o.relief ?? 2, scale: Math.max(8, r), seed: o.seed ?? 1 });
+  if (o.height) hm.hill([c[0], c[2]], r * 0.8, o.height);
+  hm.island({ center: [c[0], c[2]], radius: r, sea: c[1] - 6, falloff: 0.3, coast: 0.3, seed: (o.seed ?? 1) + 5 });
+  if (o.flat) hm.flattenCircle([c[0], c[2]], o.flat, c[1], 3);
+  hm.build(b, { palette: o.palette ?? "temperate", floating: true, cutoff: c[1] - 2, undersideDepth: o.depth ?? Math.round(r * 1.8), taper: Math.max(4, r * 0.9) });
+  return hm;
 }

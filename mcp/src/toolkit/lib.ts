@@ -3,7 +3,7 @@
 import { Builder, family } from "./builder.ts";
 import { BlockSpec, Vec, hash3, mulberry32 } from "./patterns.ts";
 import { furnish, furniture, STYLES } from "./interior.ts";
-import { HeightMap, TERRAIN_PALETTES, scatter, scatterPoints, rock } from "./terrain.ts";
+import { HeightMap, TERRAIN_PALETTES, scatter, scatterPoints, rock, floatingIsland } from "./terrain.ts";
 import { plaza, spawnPad, fountain, portal, bridge, statue, wall } from "./lobby.ts";
 
 type F = Builder;
@@ -28,6 +28,7 @@ export function makeLib(terrain: Terrain) {
     scatter: (b: Builder, hm: HeightMap, a: [number, number], c: [number, number], o: any) => scatter(b, lib, hm, a, c, o),
     scatterPoints,
     rock,
+    floatingIsland,
     // map / lobby pieces
     plaza, spawnPad, fountain, portal, bridge, statue, wall,
 
@@ -65,7 +66,7 @@ export function makeLib(terrain: Terrain) {
     door(f: F, x: number, y: number, o: { wood?: string; width?: 1 | 2; wall?: number; frame?: BlockSpec | null; awning?: string | null; step?: string | boolean | null; inset?: number } = {}) {
       const wood = o.wood ?? "spruce";
       const width = o.width ?? 1, wall = o.wall ?? 1, inset = o.inset ?? 0;
-      f.fill([x, y, 0], [x + width - 1, y + 2, -(wall - 1)], "air");
+      f.fill([x, y, 0], [x + width - 1, y + 1, -(wall - 1)], "air"); // 2 high: the door fills it exactly
       for (let i = 0; i < width; i++) {
         const hinge = width === 2 ? (i === 0 ? "left" : "right") : "left";
         f.set([x + i, y, -inset], `${wood}_door[facing=north,half=lower,hinge=${hinge}]`);

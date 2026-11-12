@@ -66,6 +66,7 @@ flowchart LR
 
 - **Builds are code.** Every project is a folder of small JavaScript components (`foundation`, `walls`, `roof`, `interior`, `terrain`, `vegetation`…) written against a builder toolkit with frames, facades, symmetry, roofs, terrain and furniture. A change like *"make the roof steeper"* is a one-line edit followed by a re-render.
 - **The agent can see.** A WebGL renderer with the real vanilla block models and textures produces contact sheets: orthographic elevations with block rulers, 3/4 views, street level, floor plans, sections, dollhouse cutaways, first-person room views and terrain context.
+- **It checks like a player.** `qa` finds what players notice first (rooms you can't get into, glass hanging in the air, blocked doors, lanterns attached to nothing), and `walkthrough` puts the agent at eye level outside, at every door and inside every room.
 - **It critiques like a professional.** The skill enforces staged work (massing → proportions → structure → depth → interiors → landscape) and a written look–critique–fix loop, backed by a craft handbook with measured lessons from professional server maps.
 - **It's a team.** Components can be claimed, there's a task board and a notes board, and subagents act as architect, facade detailer, roofer, interior designer, landscaper and critic.
 
@@ -173,6 +174,8 @@ b.roof({a: [0, 0], b: [W-1, D-1], y: 5, type: "gable", pitch: [1, 1, 2, 2], mate
 | `write_component` · `edit_component` · `read_component` · `write_library` · `component_settings` | build code, ordering, claims |
 | `render` | images from the project or the live world, with terrain context; contact sheets or clean presentation shots |
 | `inspect` | stats, ASCII slices, block lists, interior analysis |
+| `qa` | build lint: rooms you can't enter, floating glass, blocked doors, unsupported lights, stray blocks, with close-ups |
+| `walkthrough` | player-perspective tour: approach from 4 sides, every door, inside every room, look-around from spawn |
 | `apply` · `checkpoints` · `remove_from_world` | world placement and undo |
 | `export_schematic` · `import_schematic` | Sponge `.schem` v3 (WorldEdit/FAWE) |
 | `reference` | study any world save |
