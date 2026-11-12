@@ -215,7 +215,11 @@ export class AssetDB {
         for (const kv of k.split(",")) {
           const [pk, pvv] = kv.split("=");
           const have = st.props[pk];
-          if (have === undefined) continue; // unspecified: accept
+          if (have === undefined) {
+            // unspecified: accept, but prefer the vanilla default value
+            if (DEFAULTS[pk] === pvv) score += 0.5;
+            continue;
+          }
           if (have !== pvv) {
             ok = false;
             break;
@@ -312,6 +316,11 @@ const NON_SOLID = new Set([
   "barrier", "light", "structure_void", "spawner", "beacon", "slime_block", "honey_block", "tinted_glass",
   "mangrove_roots", "chorus_flower",
 ]);
+
+const DEFAULTS: Record<string, string> = {
+  axis: "y", facing: "north", half: "bottom", shape: "straight", type: "bottom", face: "wall", hinge: "left",
+  open: "false", powered: "false", waterlogged: "false", rotation: "0", attachment: "floor", hanging: "false",
+};
 
 function defaultProp(k: string): string {
   if (["north", "south", "east", "west"].includes(k)) return "none";

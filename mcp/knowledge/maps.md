@@ -2,6 +2,8 @@
 
 Large builds (server lobbies, minigame maps, scenic islands, towns) are **compositions**: terrain + a few hero buildings + structured functional areas + organic filler. Plan them like a level designer, build them like a builder.
 
+Name pure terrain components `terrain…`, `…_terrain`, `landmass…`, `vegetation`, `props`, `boundary` — renders, `qa` and `walkthrough` treat those as context and focus on the buildings. Everything else (huts, towers, ruins) is checked. Use `qa`/`walkthrough` with `region:{min,max}` to focus one island.
+
 Create map projects with `create_project {world: "<new name>", world_type: "void", site_size: [200, 200]}`. Name terrain-like components `terrain`, `island…`, `satellite…`, `vegetation`, `props`, `boundary` — renders frame on the buildings by default and ignore those (pass `frame` to choose).
 
 ## 1. Plan the map before any block
@@ -68,7 +70,7 @@ Typical lobby: spawn pad in a plaza on the main axis → fountain/statue on the 
 - Spawn protection: spawns enclosed on 3 sides, facing the action.
 
 ## 6b. SkyWars / island minigame maps (the classic layout)
-- **Layout**: 8 (or 4, 12) **player islands** evenly on a ring around a bigger **mid island**, generated with rotational symmetry (`b.radial(4, …)` twice offset by 45° via `b.polar`, or `b.polar(center, r, 8, …)` so every island is identical in gameplay and turned to face the middle). Ring radius 35–55, gap between neighbouring islands 15–25 blocks (bridgeable), mid island 2–4× the size of a player island, optionally 2–4 **satellite islands** between ring and mid for extra loot.
+- **Layout**: 8 (or 4, 12) **player islands** evenly on a ring around a bigger **mid island** (`b.polar(center, r, 8, …)`). Block grids only rotate in 90° steps, so with 8 islands the 4 diagonal ones are turned to the nearest 90° — design islands to work from any angle (round island, spawn on the side facing outward, hut entrance to the side) or offset the hut so the spawn still sees the mid island. 4 islands (`b.radial(4)`) are exact. Ring radius 35–55, gap between neighbouring islands 15–25 blocks (bridgeable), mid island 2–4× the size of a player island, optionally 2–4 **satellite islands** between ring and mid for extra loot.
 - **Player island** (~15–25 blocks across): `lib.floatingIsland` or a small heightmap with a tapered underside; a flat **spawn point** near the outer edge facing the middle; 2–3 **chests** (one in the hut, one outside); one small themed **structure** that is **enterable** (door/opening at ground level, 2-high, no step > 1) or an open pavilion — never a sealed box; a tree or rocks for cover; some vertical variety.
 - **Mid island**: the landmark (ruin, tower, temple) with 4–8 chests reachable from all sides, symmetric approach points, cover, a high point.
 - **Theme** each map (sky villages, ruined kingdoms, ice, desert…), vary decoration per island slightly but keep geometry identical.

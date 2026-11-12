@@ -192,7 +192,8 @@ export class Builder {
    */
   peek(p: Vec): string | undefined {
     const rp = this.toRoot(p);
-    return this.sink.grid.get(rp[0], rp[1], rp[2]) ?? this.sink.prior?.get(rp[0], rp[1], rp[2]);
+    const s = this.sink.grid.get(rp[0], rp[1], rp[2]) ?? this.sink.prior?.get(rp[0], rp[1], rp[2]);
+    return s?.replace(/^minecraft:/, "");
   }
 
   /** Remove a block from this component's output (does NOT carve; use clear() to write air). */

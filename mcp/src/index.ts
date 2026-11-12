@@ -123,7 +123,7 @@ async function readWorldBuild(p: Project): Promise<{ grid: VoxelGrid; bounds: Bo
   return { grid: g, bounds };
 }
 
-const TERRAINISH = /^(landscape|landscaping|garden|terrain|site|surroundings|vegetation|veg|props|scatter|island|islands|satellite|ground|water|boundary)/i;
+const TERRAINISH = /^(landscape|landscaping|garden|terrain|site|surroundings|vegetation|veg|props|scatter|ground|water|boundary)|terrain|landmass/i;
 
 async function doRender(p: Project, a: { clean?: boolean; frame?: string[]; views?: string[]; components?: string[]; hide?: string[]; context?: "auto" | "world" | "none"; source?: "project" | "world"; width?: number; height?: number; separate?: boolean; region?: { min: number[]; max: number[] } }) {
   const m = p.meta();
@@ -691,9 +691,16 @@ function qaSetup(p: Project, a: { components?: string[]; margin?: number; region
     if (!g) throw new Error(`no component '${n}' (have: ${[...r.perComponent.keys()].join(", ")})`);
     for (const [k, v] of g.cells) if (v !== 0) focusGrid.cells.set(k, v);
   }
+  if (a.region) {
+    // restrict the focus to the region
+    const R = a.region;
+    for (const k of [...focusGrid.cells.keys()]) {
+      const [x, y, z] = unkey(k);
+      if (x < R.min[0] || x > R.max[0] || y < R.min[1] || y > R.max[1] || z < R.min[2] || z > R.max[2]) focusGrid.cells.delete(k);
+    }
+  }
   let fb = focusGrid.bounds() ?? r.grid.bounds();
   if (!fb) throw new Error("nothing to check");
-  if (a.region) fb = { min: a.region.min as any, max: a.region.max as any };
   const m = a.margin ?? 6;
   const box: Bounds = { min: [fb.min[0] - m, fb.min[1] - 3, fb.min[2] - m], max: [fb.max[0] + m, fb.max[1] + 3, fb.max[2] + m] };
   return { r, names, focusGrid, focus: fb, box };
@@ -733,6 +740,7 @@ server.registerTool(
       project: z.string(),
       components: z.array(z.string()).optional().describe("which buildings to walk around (default: all non-terrain components)"),
       from: z.array(z.number()).length(3).optional().describe("look around from this standing position (4 directions)"),
+      region: z.object({ min: z.array(z.number()).length(3), max: z.array(z.number()).length(3) }).optional().describe("only walk around what is inside this box (e.g. one island of a map)"),
       max: z.number().default(12),
     },
   },
@@ -746,7 +754,8 @@ server.registerTool(
     try {
       context = await worldContext(p, focus);
     } catch {}
-    const out = await renderGrid(r.grid, context, views, { front: m.front ?? "south", width: 640, height: 420, sheet: 3, focus, ground: context ? true : false });
+    const isVoid = p.terrain().height(Math.round((focus.min[0] + focus.max[0]) / 2), Math.round((focus.min[2] + focus.max[2]) / 2)) < -100;
+    const out = await renderGrid(r.grid, context, views, { front: m.front ?? "south", width: 640, height: 420, sheet: 3, focus, ground: isVoid ? false : context ? true : "backdrop", groundY: isVoid ? undefined : p.terrain().height(Math.round(focus.min[0]), Math.round(focus.min[2])) + 1 });
     const stamp = new Date().toISOString().replace(/[:.]/g, "-");
     const f = p.p("reviews", `${stamp}_walkthrough.png`);
     fs.writeFileSync(f, out.images[0]);

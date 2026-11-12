@@ -159,8 +159,9 @@ export function runQA(grid: VoxelGrid, box: Bounds, focusGrid?: VoxelGrid, groun
   // ---- player walk test: start on open ground (sky above), walk (step up/down 1, through doors);
   //      every roofed floor area that can't be reached has no usable entrance ----
   const isStair = (n: string | null) => !!n && /_stairs$|_slab$/.test(n);
+  const climb = (x: number, y: number, z: number) => /^(ladder|vine|scaffolding|twisting_vines.*|weeping_vines.*)$/.test(nameAt(x, y, z) ?? "");
   const standable = (x: number, y: number, z: number) =>
-    y - 1 >= y0 && y + 1 <= y1 && solid(nameAt(x, y - 1, z)) && !solid(nameAt(x, y, z)) && !solid(nameAt(x, y + 1, z));
+    y - 1 >= y0 && y + 1 <= y1 && (solid(nameAt(x, y - 1, z)) || climb(x, y, z) || climb(x, y - 1, z)) && !solid(nameAt(x, y, z)) && !solid(nameAt(x, y + 1, z));
   const covered = (x: number, y: number, z: number) => {
     for (let yy = y + 2; yy <= y1; yy++) if (solid(nameAt(x, yy, z))) return true;
     return false;
@@ -177,6 +178,14 @@ export function runQA(grid: VoxelGrid, box: Bounds, focusGrid?: VoxelGrid, groun
       }
   for (let h = 0; h < wq.length; h += 3) {
     const x = wq[h], y = wq[h + 1], z = wq[h + 2];
+    // climbing up/down ladders
+    for (const dy of [1, -1]) {
+      if (!(climb(x, y, z) || climb(x, y + dy, z))) continue;
+      const ny = y + dy;
+      if (ny <= y0 || ny >= y1 || solid(nameAt(x, ny, z)) || solid(nameAt(x, ny + 1, z))) continue;
+      const k = idx(x, ny, z);
+      if (!walked[k]) { walked[k] = 1; wq.push(x, ny, z); }
+    }
     for (const [dx, dz] of [[1, 0], [-1, 0], [0, 1], [0, -1]])
       for (const dy of [0, 1, -1, -2]) {
         const nx = x + dx, ny = y + dy, nz = z + dz;
@@ -395,9 +404,11 @@ export function walkthroughViews(grid: VoxelGrid, focus: Bounds, qa: QAResult, o
       const y = standY(grid, x, z, focus.max[1] + 2, focus.min[1] - 30, o.groundAt);
       if (y !== null) { spot = [x, y, z]; break; }
     }
-    if (!spot) {
-      const d = Math.round(half + 8);
-      spot = [Math.round(c[0] + dx * d), focus.min[1], Math.round(c[2] + dz * d)];
+    const floor = qa.doors.length ? Math.min(...qa.doors.map((d) => d.pos[1])) : focus.min[1];
+    if (!spot || spot[1] < floor - 1) {
+      // nothing to stand on at a sensible height (void map / cliff edge): hover at the build's floor level like a flying player
+      const d = Math.round(half + 9);
+      spot = [Math.round(c[0] + dx * d), floor, Math.round(c[2] + dz * d)];
     }
     const yaw = yawTo(spot[0], spot[2], c[0], c[2]);
     const pitch = -Math.max(-25, Math.min(25, ((Math.atan2(c[1] - (spot[1] + 1.6), Math.hypot(c[0] - spot[0], c[2] - spot[2])) * 180) / Math.PI)));

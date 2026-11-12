@@ -1,0 +1,1 @@
+SkyWars map, Sky Village theme: 8 identical player islands with timber cottages (spruce frame, calcite walls, red nether brick roofs with dark oak trim) on a ring r=50 around a mid island with a ruined stone watchtower; 4 satellite loot islands.

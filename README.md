@@ -122,6 +122,22 @@ flowchart LR
 
 ---
 
+## 🧭 Player checks: `qa` + `walkthrough`
+
+<img src="docs/images/skywars-overview.jpg" alt="skywars map"/>
+
+<img src="docs/images/walkthrough.jpg" alt="walkthrough sheet"/>
+<sub>A <code>walkthrough</code> of one SkyWars island: approaching from four sides, the door, inside the hut, and the view from spawn toward the mid tower.</sub>
+
+Overhead renders hide what players notice first. **`qa`** walks a virtual player in from the open ground and flags:
+- rooms you can't enter
+- glass or panes not held by a wall
+- blocked doors, or doors missing their upper half
+- lanterns, torches and signs attached to nothing
+- stray floating blocks
+
+Every finding comes with coordinates and close-ups. **`walkthrough`** renders the build at eye level: from all four sides, at every door, inside every room, and looking around from spawn. The skill makes both mandatory at every stage, and `apply` requires zero QA errors first.
+
 ## 🎮 Verified in the real game
 
 <table>
@@ -192,6 +208,7 @@ Prompts: `master_builder`, `lead_architect`, `facade_detailer`, `roofer`, `inter
 | example | what it shows | start from it |
 |---|---|---|
 | [`examples/cottage`](examples/cottage) | staged house build: walls, timber frame, openings, roof with line-work, furnished interior, garden | `create_project {name, template:"cottage"}` |
+| [`examples/skywars`](examples/skywars) | SkyWars map: 8 identical enterable player-island huts placed by `b.polar`, mid tower with spiral stair, ruins, satellite loot islands, 36 chests | `create_project {name, template:"skywars", world:"sw", world_type:"void", site_size:[160,160]}` |
 | [`examples/sky-lobby`](examples/sky-lobby) | whole floating-island lobby: terrain, satellite island, temple + hall, spawn core, 4 portals, paths, shop, parkour, gazebo, vegetation | `create_project {name, template:"sky-lobby", world:"lobby", world_type:"void", site_size:[200,200]}` |
 
 ## 🗂️ Repository layout

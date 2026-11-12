@@ -1,0 +1,82 @@
+{
+  "name": "skywars",
+  "world": "skywars_void",
+  "origin": [
+    0,
+    64,
+    0
+  ],
+  "rotation": 0,
+  "front": "south",
+  "style": "sky village, timber frame, red roofs",
+  "seed": 8840,
+  "site": {
+    "min": [
+      0,
+      0
+    ],
+    "max": [
+      159,
+      159
+    ]
+  },
+  "palette": {
+    "foundation": "cobblestone",
+    "frame": "stripped_spruce_log",
+    "wall": "calcite",
+    "trim": "spruce",
+    "roofmat": "red_nether_brick",
+    "accent": "dark_oak"
+  },
+  "components": [
+    {
+      "name": "island_players",
+      "enabled": true,
+      "status": "draft",
+      "owner": null
+    },
+    {
+      "name": "player_hut_a",
+      "enabled": true,
+      "status": "draft",
+      "owner": null
+    },
+    {
+      "name": "player_huts",
+      "enabled": true,
+      "status": "draft",
+      "owner": null
+    },
+    {
+      "name": "island_mid",
+      "enabled": true,
+      "status": "draft",
+      "owner": null
+    },
+    {
+      "name": "mid_tower",
+      "enabled": true,
+      "status": "draft",
+      "owner": null
+    },
+    {
+      "name": "mid_ruins",
+      "enabled": true,
+      "status": "draft",
+      "owner": null
+    },
+    {
+      "name": "satellites",
+      "enabled": true,
+      "status": "draft",
+      "owner": null
+    },
+    {
+      "name": "sat_shrines",
+      "enabled": true,
+      "status": "draft",
+      "owner": null
+    }
+  ],
+  "created": "2026-11-12T00:23:03.890Z"
+}
